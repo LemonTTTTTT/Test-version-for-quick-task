@@ -716,7 +716,6 @@
     function selectWard(ward) {
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
 
-      // Reset scroll position to top when switching wards to prevent the list from being hidden
       const mainContent = document.getElementById('main-content');
       if (mainContent) mainContent.scrollTop = 0;
 
@@ -728,7 +727,6 @@
       if (document.activeElement === input || input.value.length > 0) {
         setTimeout(() => input.focus(), 10);
       }
-    }
     }
 
     function addTask(priority) {
