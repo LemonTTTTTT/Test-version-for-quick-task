@@ -560,31 +560,36 @@
       });
     }
 
+    
+    let appContainer, footerElem, topFixedElem, mainContentElem;
+    let viewportUpdatePending = false;
+
     function handleViewportResize() {
       if (!window.visualViewport) return;
-      
-      const appContainer = document.getElementById('app-container');
-      const footer = document.getElementById('app-footer');
-      const topFixed = document.getElementById('top-fixed');
-      const mainContent = document.getElementById('main-content');
+      if (viewportUpdatePending) return;
+      viewportUpdatePending = true;
 
-      const viewportHeight = window.visualViewport.height;
-      const viewportTop = window.visualViewport.offsetTop;
+      requestAnimationFrame(() => {
+        if (!appContainer) {
+          appContainer = document.getElementById('app-container');
+          footerElem = document.getElementById('app-footer');
+          topFixedElem = document.getElementById('top-fixed');
+          mainContentElem = document.getElementById('main-content');
+        }
 
-      appContainer.style.height = `${viewportHeight}px`;
-      appContainer.style.top = `${viewportTop}px`;
+        appContainer.style.height = window.visualViewport.height + 'px';
+        appContainer.style.top = window.visualViewport.offsetTop + 'px';
+        mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
+        mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
 
-      const topHeight = topFixed.offsetHeight;
-      const footerHeight = footer.offsetHeight;
-      mainContent.style.paddingTop = `${topHeight + 8}px`;
-      mainContent.style.paddingBottom = `${footerHeight + 8}px`;
-
-      window.scrollTo(0, 0);
+        window.scrollTo(0, 0);
+        viewportUpdatePending = false;
+      });
     }
 
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportResize);
-      window.visualViewport.addEventListener('scroll', handleViewportResize);
+      window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+      window.visualViewport.addEventListener('scroll', handleViewportResize, { passive: true });
     }
 
     
