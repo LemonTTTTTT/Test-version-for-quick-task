@@ -444,7 +444,7 @@
           <button class="toggle-btn active" id="sort-time" onclick="setSort('time')">By time</button>
           <button class="toggle-btn" id="sort-urgency" onclick="setSort('urgency')">By urgency</button>
         </div>
-        
+        <button class="clear-btn" onclick="clearAll()">Clear all</button>
       </div>
 
       <div class="ward-section">
@@ -679,7 +679,17 @@
       setTimeout(handleViewportResize, 50);
     }
 
-        }
+    function checkBackupReminder() {
+      const alertBox = document.getElementById('backup-alert');
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      if (!lastBackupTime || (now - parseInt(lastBackupTime)) > ONE_DAY_MS) {
+        alertBox.style.display = 'flex';
+      } else {
+        alertBox.style.display = 'none';
+      }
+    }
 
     function renderWards() {
       const container = document.getElementById('ward-chips');
@@ -990,6 +1000,7 @@
 
       const now = Date.now();
       
+
       const d = new Date();
       const filename = `quick_tasks_backup_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.json`;
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ tasks, wards }, null, 2));
