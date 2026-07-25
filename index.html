@@ -712,6 +712,16 @@
       }
     }
 
+    
+    function handleEditBlur(id) {
+      setTimeout(() => {
+        // If we are still editing this task and focus has completely left the input and not gone to an urgency button
+        if (editingTaskId === id) {
+           commitInlineEdit(id);
+        }
+      }, 150);
+    }
+
     function commitInlineEdit(id) {
       const input = document.getElementById(`edit-input-${id}`);
       if (input) {
@@ -988,7 +998,7 @@
           return `
             <div class="task-item" data-id="${task.id}">
               <div class="inline-edit-container">
-                <input type="text" id="edit-input-${task.id}" class="inline-edit-input" value="${escapeHtml(task.text)}" onkeydown="if(event.key==='Enter') commitInlineEdit(${task.id})">
+                <input type="text" id="edit-input-${task.id}" class="inline-edit-input" value="${escapeHtml(task.text)}" enterkeyhint="done" onkeydown="if(event.key==='Enter') commitInlineEdit(${task.id})" onblur="handleEditBlur(${task.id})">
                 <div class="inline-urgency-selector">
                   <span class="urgency-label">Urgency:</span>
                   <button type="button" class="urgency-opt-btn opt-high ${task.priority === 'high' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'high', event)" onclick="changeUrgencyDirect(${task.id}, 'high', event)">High</button>
