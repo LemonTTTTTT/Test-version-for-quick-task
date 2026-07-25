@@ -437,22 +437,14 @@
         </div>
       </header>
 
-      <div id="backup-alert" class="backup-alert" style="display: none;">
-        <span>⚠️ Backup Reminder (>24h)!</span>
-        <button class="action-link" onclick="exportTasks()">Backup Now</button>
-      </div>
+      
 
       <div class="controls">
         <div class="toggle-group">
           <button class="toggle-btn active" id="sort-time" onclick="setSort('time')">By time</button>
           <button class="toggle-btn" id="sort-urgency" onclick="setSort('urgency')">By urgency</button>
         </div>
-        <div class="backup-actions">
-          <button class="action-link" onclick="exportTasks()">📥 Backup</button>
-          <button class="action-link" onclick="document.getElementById('import-file').click()">📤 Restore</button>
-          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importTasks(event)">
-          <button class="clear-btn" onclick="clearAll()">Clear all</button>
-        </div>
+        
       </div>
 
       <div class="ward-section">
@@ -491,6 +483,10 @@
       <div class="about-body">
 
         <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault();" onclick="exportTasks()">⬇️ Backup Data</button>
+        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault();" onclick="document.getElementById('import-file').click()">⬆️ Restore Data</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importTasks(event)">
+
           
 
           
@@ -544,8 +540,7 @@
     let selectedWard = 'All';
     let editingTaskId = null;
     let activeEditingTaskIdForWard = null;
-    let lastBackupTime = localStorage.getItem('qt_last_backup') || null;
-    let currentSort = 'time';
+        let currentSort = 'time';
 
     const urgencyMap = { high: 1, mid: 2, low: 3 };
 
@@ -609,6 +604,52 @@
       }
       setTimeout(handleViewportResize, 100);
       preventSafariInputScroll(document.getElementById('task-input'));
+    
+    // Swipe gestures for changing wards
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.getElementById('main-content').addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.getElementById('main-content').addEventListener('touchend', e => {
+      if (editingTaskId !== null) return; // Disable swiping while editing
+
+      const touchEndX = e.changedTouches[0].screenX;
+      const touchEndY = e.changedTouches[0].screenY;
+
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Check if horizontal swipe is dominant and large enough
+      if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        const wardList = ['All', ...wards];
+        const currentIndex = wardList.indexOf(selectedWard);
+
+        if (deltaX < 0) {
+          // Swipe Left -> Next Ward
+          if (currentIndex < wardList.length - 1) {
+            selectWard(wardList[currentIndex + 1]);
+            // Scroll chips to make sure active ward is visible
+            const chipsContainer = document.getElementById('ward-chips');
+            const targetChip = chipsContainer.children[currentIndex + 1];
+            if (targetChip) targetChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        } else {
+          // Swipe Right -> Prev Ward
+          if (currentIndex > 0) {
+            selectWard(wardList[currentIndex - 1]);
+            // Scroll chips
+            const chipsContainer = document.getElementById('ward-chips');
+            const targetChip = chipsContainer.children[currentIndex - 1];
+            if (targetChip) targetChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        }
+      }
+    }, { passive: true });
+
     });
 
 
@@ -633,23 +674,12 @@
     function saveAndRender() {
       localStorage.setItem('qt_tasks', JSON.stringify(tasks));
       localStorage.setItem('qt_wards', JSON.stringify(wards));
-      checkBackupReminder();
-      renderWards();
+            renderWards();
       renderWithAnimation();
       setTimeout(handleViewportResize, 50);
     }
 
-    function checkBackupReminder() {
-      const alertBox = document.getElementById('backup-alert');
-      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-      const now = Date.now();
-
-      if (!lastBackupTime || (now - parseInt(lastBackupTime)) > ONE_DAY_MS) {
-        alertBox.style.display = 'flex';
-      } else {
-        alertBox.style.display = 'none';
-      }
-    }
+        }
 
     function renderWards() {
       const container = document.getElementById('ward-chips');
@@ -959,9 +989,7 @@
       }
 
       const now = Date.now();
-      localStorage.setItem('qt_last_backup', now.toString());
-      lastBackupTime = now;
-
+      
       const d = new Date();
       const filename = `quick_tasks_backup_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.json`;
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ tasks, wards }, null, 2));
@@ -972,8 +1000,7 @@
       downloadAnchor.click();
       downloadAnchor.remove();
 
-      checkBackupReminder();
-    }
+          }
 
     function importTasks(event) {
       const fileReader = new FileReader();
