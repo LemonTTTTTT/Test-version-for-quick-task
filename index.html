@@ -14,9 +14,11 @@
 
   <style>
 
+    
     :root {
       --bg: #f8f9fa;
       --card-bg: #ffffff;
+      --card-bg-completed: #fdfdfd;
       --text: #212529;
       --border: #e9ecef;
       --high: #ff4d4f;
@@ -28,7 +30,27 @@
       --empty-text: #8c8c8c;
       --input-bg: #ffffff;
       --btn-bg: #fafafa;
+      --badge-text: #ffffff;
     }
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --card-bg-completed: #171717;
+      --text: #e0e0e0;
+      --border: #333333;
+      --high: #ff6b6b;
+      --mid: #ffd54f;
+      --low: #81c784;
+      --primary: #4dabf5;
+      --ward-chip-bg: #2d2d2d;
+      --ward-chip-text: #aaaaaa;
+      --empty-text: #777777;
+      --input-bg: #2c2c2c;
+      --btn-bg: #2d2d2d;
+      --badge-text: #121212;
+    }
+
 
     [data-theme="dark"] {
       --bg: #121212;
@@ -190,7 +212,7 @@
     
     .task-item.completed { 
       opacity: 0.55; 
-      background: #fdfdfd;
+      background: var(--card-bg-completed);
     }
 
     .task-item .task-text {
@@ -374,15 +396,15 @@
       justify-content: space-between;
       align-items: center;
     }
-    .ward-select-item.selected { background: #e6f7ff; border-color: var(--primary); color: var(--primary); font-weight: 600; }
-    .ward-select-item.clear-item { background: #fff1f0; border-color: #ffa39e; color: #ff4d4f; }
+    .ward-select-item.selected { background: var(--ward-chip-bg); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+    .ward-select-item.clear-item { background: var(--ward-chip-bg); border-color: #ffa39e; color: #ff4d4f; }
 
     .ward-manage-list { display: flex; flex-direction: column; gap: 6px; max-height: 250px; overflow-y: auto; }
     .ward-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
     .item-controls { display: flex; gap: 4px; }
     .icon-btn { background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 2px 4px; }
     .modal-footer { display: flex; gap: 6px; }
-    .modal-input { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; -webkit-appearance: none; }
+    .modal-input { background-color: var(--input-bg); color: var(--text); flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; -webkit-appearance: none; }
 
     /* About / Disclaimer Modal Styles */
     .about-body {
