@@ -565,10 +565,25 @@
       window.visualViewport.addEventListener('scroll', handleViewportResize);
     }
 
+    
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('qt_theme', next);
+      document.getElementById('theme-btn').innerText = next === 'light' ? '🌙' : '☀️';
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('qt_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('theme-btn').innerText = '☀️';
+      }
       setTimeout(handleViewportResize, 100);
       preventSafariInputScroll(document.getElementById('task-input'));
     });
+
 
     document.addEventListener('click', function(e) {
       if (editingTaskId === null) return;
