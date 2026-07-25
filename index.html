@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png"><rect width='100' height='100' rx='20' fill='%231890ff'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 
   <style>
+
     :root {
       --bg: #f8f9fa;
       --card-bg: #ffffff;
@@ -22,7 +23,29 @@
       --mid: #faad14;
       --low: #52c41a;
       --primary: #1890ff;
+      --ward-chip-bg: #f0f2f5;
+      --ward-chip-text: #666;
+      --empty-text: #8c8c8c;
+      --input-bg: #ffffff;
+      --btn-bg: #fafafa;
     }
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #e0e0e0;
+      --border: #333333;
+      --high: #ff6b6b;
+      --mid: #ffd54f;
+      --low: #81c784;
+      --primary: #4dabf5;
+      --ward-chip-bg: #2d2d2d;
+      --ward-chip-text: #aaaaaa;
+      --empty-text: #777777;
+      --input-bg: #2c2c2c;
+      --btn-bg: #2d2d2d;
+    }
+
 
     * { 
       box-sizing: border-box; 
@@ -86,9 +109,9 @@
     }
 
     .controls { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--card-bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 6px; }
-    .toggle-group { display: flex; background: #f0f2f5; border-radius: 6px; padding: 2px; }
-    .toggle-btn { border: none; background: none; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; color: #666; font-weight: 500; }
-    .toggle-btn.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .toggle-group { display: flex; background: var(--ward-chip-bg); border-radius: 6px; padding: 2px; }
+    .toggle-btn { border: none; background: none; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; color: var(--ward-chip-text); font-weight: 500; }
+    .toggle-btn.active { background: var(--card-bg); color: var(--text); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     
     .backup-actions { display: flex; gap: 8px; align-items: center; }
     .action-link { border: none; background: none; color: var(--primary); font-size: 0.75rem; cursor: pointer; text-decoration: none; font-weight: 500; }
@@ -107,7 +130,7 @@
     .ward-label { font-size: 0.75rem; font-weight: 700; color: #333; white-space: nowrap; }
     .ward-chips { display: flex; gap: 6px; align-items: center; }
     .ward-chip {
-      background: #f0f2f5;
+      background: var(--ward-chip-bg);
       border: 1px solid var(--border);
       padding: 4px 10px;
       border-radius: 12px;
@@ -209,7 +232,7 @@
     
     .badge-no-ward {
       background-color: #e9ecef;
-      color: #666;
+      color: var(--ward-chip-text);
       cursor: pointer;
     }
 
@@ -268,7 +291,7 @@
       -webkit-appearance: none;
     }
     .inline-urgency-selector { display: flex; gap: 6px; align-items: center; }
-    .urgency-label { font-size: 0.75rem; font-weight: 600; color: #666; }
+    .urgency-label { font-size: 0.75rem; font-weight: 600; color: var(--ward-chip-text); }
     .urgency-opt-btn {
       flex: 1;
       padding: 6px;
@@ -276,8 +299,8 @@
       border-radius: 6px;
       font-size: 0.75rem;
       font-weight: 600;
-      background: #fafafa;
-      color: #666;
+      background: var(--btn-bg);
+      color: var(--ward-chip-text);
       cursor: pointer;
       text-transform: uppercase;
     }
@@ -310,7 +333,7 @@
     }
     .input-box:focus { border-color: var(--primary); }
     .btn-group { display: flex; gap: 6px; }
-    .add-btn { flex: 1; padding: 8px; border: 1px solid var(--border); background: #fafafa; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+    .add-btn { flex: 1; padding: 8px; border: 1px solid var(--border); background: var(--btn-bg); border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
     .add-btn.high { color: var(--high); }
     .add-btn.mid { color: var(--mid); }
     .add-btn.low { color: var(--low); }
@@ -325,7 +348,7 @@
       z-index: 2000;
     }
     .modal-content {
-      background: white;
+      background: var(--card-bg); color: var(--text);
       border-radius: 12px;
       width: 90%;
       max-width: 400px;
@@ -343,7 +366,7 @@
       padding: 10px 12px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      background: #fafafa;
+      background: var(--btn-bg);
       font-weight: 500;
       font-size: 0.85rem;
       cursor: pointer;
@@ -387,6 +410,7 @@
       <header>
         <h1>⚡ Quick Tasks</h1>
         <div class="header-actions">
+          <button class="info-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
           <button class="info-btn" onclick="openAboutModal()">⚙️ Main Settings</button>
         </div>
       </header>
@@ -427,9 +451,9 @@
     <footer id="app-footer">
       <input type="text" id="task-input" class="input-box" placeholder="New task..." onkeydown="if(event.key==='Enter') addTask('mid')">
       <div class="btn-group">
-        <button class="add-btn high" onclick="addTask('high')">+ High</button>
-        <button class="add-btn mid" onclick="addTask('mid')">+ Mid</button>
-        <button class="add-btn low" onclick="addTask('low')">+ Low</button>
+        <button class="add-btn high" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('high')">+ High</button>
+        <button class="add-btn mid" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('mid')">+ Mid</button>
+        <button class="add-btn low" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('low')">+ Low</button>
       </div>
     </footer>
   </div>
@@ -588,13 +612,13 @@
     function renderWards() {
       const container = document.getElementById('ward-chips');
       let html = `
-        <button class="ward-chip ${selectedWard === 'All' ? 'active' : ''}" onclick="selectWard('All')">
+        <button class="ward-chip ${selectedWard === 'All' ? 'active' : ''}" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="selectWard('All')">
           All
         </button>
       `;
 
       html += wards.map(w => `
-        <button class="ward-chip ${selectedWard === w ? 'active' : ''}" onclick="selectWard('${escapeHtml(w)}')">
+        <button class="ward-chip ${selectedWard === w ? 'active' : ''}" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="selectWard('${escapeHtml(w)}')">
           ${escapeHtml(w)}
         </button>
       `).join('');
@@ -611,91 +635,12 @@
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       selectedWard = ward;
       saveAndRender();
-    }
 
-    function addTask(priority) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      // Keep focus on input if we are rapidly adding tasks
       const input = document.getElementById('task-input');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const now = Date.now();
-      const assignedWard = selectedWard === 'All' ? null : selectedWard;
-
-      tasks.push({
-        id: now,
-        text: text,
-        priority: priority,
-        ward: assignedWard,
-        createdAt: now,
-        completed: false
-      });
-
-      input.value = '';
-      saveAndRender();
-    }
-
-        function startEditing(id, event) {
-      if (event) {
-        event.stopPropagation();
-        event.preventDefault();
+      if (document.activeElement === input) {
+        setTimeout(() => input.focus(), 10);
       }
-      if (editingTaskId !== null && editingTaskId !== id) {
-        commitInlineEdit(editingTaskId);
-      }
-      editingTaskId = id;
-      renderWithAnimation();
-
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
-        preventSafariInputScroll(input);
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-
-        // Use timeout only for scrolling so focus happens synchronously in the event handler
-        setTimeout(() => {
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 400);
-      }
-    }
-
-    function changeUrgencyDirect(id, priority, event) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      const task = tasks.find(t => t.id === id);
-      if (task) task.priority = priority;
-      
-      const itemContainer = document.querySelector(`[data-id="${id}"]`);
-      if (itemContainer) {
-        const buttons = itemContainer.querySelectorAll('.urgency-opt-btn');
-        buttons.forEach(btn => {
-          btn.classList.remove('selected');
-          if (btn.classList.contains(`opt-${priority}`)) {
-            btn.classList.add('selected');
-          }
-        });
-      }
-    }
-
-    function commitInlineEdit(id) {
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
-        const text = input.value.trim();
-        if (text) {
-          const task = tasks.find(t => t.id === id);
-          if (task) task.text = text;
-        }
-      }
-      editingTaskId = null;
-      saveAndRender();
-    }
-
-    function deleteTask(id) {
-      tasks = tasks.filter(t => t.id !== id);
-      if (editingTaskId === id) editingTaskId = null;
-      saveAndRender();
     }
 
     function openTaskWardModal(taskId) {
@@ -963,9 +908,7 @@
                   <button type="button" class="urgency-opt-btn opt-low ${task.priority === 'low' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'low', event)" onclick="changeUrgencyDirect(${task.id}, 'low', event)">Low</button>
                 </div>
               </div>
-              <div class="task-actions-right">
-                <button class="delete-cross-btn" onclick="deleteTask(${task.id})" title="Delete">❌</button>
-              </div>
+
             </div>
           `;
         }
@@ -1025,7 +968,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = '1';
+            node.style.opacity = '';
             node.style.transform = 'translateY(0)';
           });
         }
