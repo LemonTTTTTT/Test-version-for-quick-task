@@ -451,9 +451,9 @@
     <footer id="app-footer">
       <input type="text" id="task-input" class="input-box" placeholder="New task..." onkeydown="if(event.key==='Enter') addTask('mid')">
       <div class="btn-group">
-        <button class="add-btn high" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('high')">+ High</button>
-        <button class="add-btn mid" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('mid')">+ Mid</button>
-        <button class="add-btn low" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="addTask('low')">+ Low</button>
+        <button class="add-btn high" onmousedown="event.preventDefault();" onclick="addTask('high')">+ High</button>
+        <button class="add-btn mid" onmousedown="event.preventDefault();" onclick="addTask('mid')">+ Mid</button>
+        <button class="add-btn low" onmousedown="event.preventDefault();" onclick="addTask('low')">+ Low</button>
       </div>
     </footer>
   </div>
@@ -612,13 +612,13 @@
     function renderWards() {
       const container = document.getElementById('ward-chips');
       let html = `
-        <button class="ward-chip ${selectedWard === 'All' ? 'active' : ''}" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="selectWard('All')">
+        <button class="ward-chip ${selectedWard === 'All' ? 'active' : ''}" onmousedown="event.preventDefault();" onclick="selectWard('All')">
           All
         </button>
       `;
 
       html += wards.map(w => `
-        <button class="ward-chip ${selectedWard === w ? 'active' : ''}" onpointerdown="event.preventDefault()" onpointerdown="event.preventDefault()" onclick="selectWard('${escapeHtml(w)}')">
+        <button class="ward-chip ${selectedWard === w ? 'active' : ''}" onmousedown="event.preventDefault();" onclick="selectWard('${escapeHtml(w)}')">
           ${escapeHtml(w)}
         </button>
       `).join('');
@@ -638,9 +638,97 @@
 
       // Keep focus on input if we are rapidly adding tasks
       const input = document.getElementById('task-input');
-      if (document.activeElement === input) {
+      if (document.activeElement === input || input.value.length > 0) {
         setTimeout(() => input.focus(), 10);
       }
+    }
+
+    function addTask(priority) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      const input = document.getElementById('task-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const now = Date.now();
+      const assignedWard = selectedWard === 'All' ? null : selectedWard;
+
+      tasks.push({
+        id: now,
+        text: text,
+        priority: priority,
+        ward: assignedWard,
+        createdAt: now,
+        completed: false
+      });
+
+      input.value = '';
+      saveAndRender();
+
+      // Keep keyboard open for continuous entry
+      setTimeout(() => input.focus(), 10);
+    }
+
+        function startEditing(id, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      if (editingTaskId !== null && editingTaskId !== id) {
+        commitInlineEdit(editingTaskId);
+      }
+      editingTaskId = id;
+      renderWithAnimation();
+
+      const input = document.getElementById(`edit-input-${id}`);
+      if (input) {
+        preventSafariInputScroll(input);
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+
+        // Use timeout only for scrolling so focus happens synchronously in the event handler
+        setTimeout(() => {
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 400);
+      }
+    }
+
+    function changeUrgencyDirect(id, priority, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const task = tasks.find(t => t.id === id);
+      if (task) task.priority = priority;
+      
+      const itemContainer = document.querySelector(`[data-id="${id}"]`);
+      if (itemContainer) {
+        const buttons = itemContainer.querySelectorAll('.urgency-opt-btn');
+        buttons.forEach(btn => {
+          btn.classList.remove('selected');
+          if (btn.classList.contains(`opt-${priority}`)) {
+            btn.classList.add('selected');
+          }
+        });
+      }
+    }
+
+    function commitInlineEdit(id) {
+      const input = document.getElementById(`edit-input-${id}`);
+      if (input) {
+        const text = input.value.trim();
+        if (text) {
+          const task = tasks.find(t => t.id === id);
+          if (task) task.text = text;
+        }
+      }
+      editingTaskId = null;
+      saveAndRender();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      if (editingTaskId === id) editingTaskId = null;
+      saveAndRender();
     }
 
     function openTaskWardModal(taskId) {
