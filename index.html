@@ -749,6 +749,8 @@
       const text = input.value.trim();
       if (!text) return;
 
+      if (typeof gtag === 'function') gtag('event', 'task_added', { 'priority_level': priority });
+
       const now = Date.now();
       const assignedWard = selectedWard === 'All' ? null : selectedWard;
 
