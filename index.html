@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-1WZH4CFZ2B"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-1WZH4CFZ2B');
+</script>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Quick Tasks</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Quick Tasks">
+
+  <!-- Icon for Apple Home Screen -->
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"><rect width='100' height='100' rx='20' fill='%231890ff'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+
+  <style>
+
+    
+    :root {
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --card-bg-completed: #fdfdfd;
+      --text: #212529;
+      --border: #e9ecef;
+      --high: #ff4d4f;
+      --mid: #faad14;
+      --low: #52c41a;
+      --primary: #1890ff;
+      --ward-chip-bg: #f0f2f5;
+      --ward-chip-text: #666;
+      --empty-text: #8c8c8c;
+      --input-bg: #ffffff;
+      --btn-bg: #fafafa;
+      --badge-text: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --card-bg-completed: #171717;
+      --text: #e0e0e0;
+      --border: #333333;
+      --high: #ff6b6b;
+      --mid: #ffd54f;
+      --low: #81c784;
+      --primary: #4dabf5;
+      --ward-chip-bg: #2d2d2d;
+      --ward-chip-text: #aaaaaa;
+      --empty-text: #777777;
+      --input-bg: #2c2c2c;
+      --btn-bg: #2d2d2d;
+      --badge-text: #121212;
+    }
+
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --text: #e0e0e0;
+      --border: #333333;
+      --high: #ff6b6b;
+      --mid: #ffd54f;
+      --low: #81c784;
+      --primary: #4dabf5;
+      --ward-chip-bg: #2d2d2d;
+      --ward-chip-text: #aaaaaa;
+      --empty-text: #777777;
+      --input-bg: #2c2c2c;
+      --btn-bg: #2d2d2d;
+    }
+
+
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      touch-action: manipulation;
+    }
+    
+    html, body { 
+      background-color: var(--bg); 
+      color: var(--text); 
+      height: 100%;
+      width: 100%;
+      overflow: hidden; 
+      position: fixed;
+      left: 0;
+      top: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+    }
+    
+        .top-fixed-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--card-bg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+
+    header { background: var(--card-bg); padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 1.1rem; font-weight: 600; }
+    
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .info-btn { background: none; border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; color: #555; font-weight: 500; }
+
+    .backup-alert {
+      background-color: #fff2f0;
+      border-bottom: 1px solid #ffccc7;
+      color: #ff4d4f;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .controls { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--card-bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 6px; }
+    .toggle-group { display: flex; background: var(--ward-chip-bg); border-radius: 6px; padding: 2px; }
+    .toggle-btn { border: none; background: none; padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; color: var(--ward-chip-text); font-weight: 500; }
+    .toggle-btn.active { background: var(--card-bg); color: var(--text); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    
+    .backup-actions { display: flex; gap: 8px; align-items: center; }
+    .action-link { border: none; background: none; color: var(--primary); font-size: 0.75rem; cursor: pointer; text-decoration: none; font-weight: 500; }
+    .clear-btn { border: none; background: none; color: #ff4d4f; font-size: 0.75rem; cursor: pointer; font-weight: 500; }
+
+    .ward-section {
+      background: var(--card-bg);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .ward-label { font-size: 0.75rem; font-weight: 700; color: #333; white-space: nowrap; }
+    .ward-chips { display: flex; gap: 6px; align-items: center; }
+    .ward-chip {
+      background: var(--ward-chip-bg);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: 0.2s;
+    }
+    .ward-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .settings-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: #555;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 500;
+      margin-left: auto;
+    }
+
+    main { 
+      flex: 1; 
+      overflow-y: auto; 
+      padding: 8px; 
+      -webkit-overflow-scrolling: touch; 
+      padding-top: calc(130px + env(safe-area-inset-top, 0px)); 
+      padding-bottom: calc(45vh + env(safe-area-inset-bottom, 0px));
+    }
+
+    .empty-state { text-align: center; color: #8c8c8c; margin-top: 15vh; }
+    .empty-icon { font-size: 1.8rem; margin-bottom: 4px; }
+
+    .task-list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 6px; 
+      position: relative;
+      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
+    }
+
+    .task-item { 
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      background: var(--card-bg); 
+      border: 1px solid var(--border); 
+      border-radius: 6px; 
+      padding: 8px 10px; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px;
+    }
+    
+    .task-item.completed { 
+      opacity: 0.55; 
+      background: var(--card-bg-completed);
+    }
+
+    .task-item .task-text {
+      font-size: 0.85rem; 
+      font-weight: 500; 
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+    
+    .task-item.completed .task-text { 
+      text-decoration: line-through; 
+      color: #8c8c8c; 
+    }
+
+    .task-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .task-details { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+    
+    .badges { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .badge { font-size: 0.62rem; font-weight: 600; padding: 1px 5px; border-radius: 6px; text-transform: uppercase; color: white; align-self: center; }
+    
+    .badge-high, .badge-mid, .badge-low { 
+      min-width: 38px; 
+      text-align: center; 
+      display: inline-block; 
+    }
+
+    .badge-high { background-color: var(--high); }
+    .badge-mid { background-color: var(--mid); }
+    .badge-low { background-color: var(--low); }
+    
+    .badge-ward { 
+      background-color: #722ed1; 
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    
+    .badge-no-ward {
+      background-color: #e9ecef;
+      color: var(--ward-chip-text);
+      cursor: pointer;
+    }
+
+    .task-time { font-size: 0.65rem; color: #8c8c8c; margin-left: 2px; font-weight: 500; }
+
+    .action-btn { 
+      background: none; 
+      border: 1px solid var(--border); 
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      color: transparent; 
+      cursor: pointer; 
+      font-size: 0.75rem; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .task-item.completed .action-btn { 
+      background-color: #52c41a; 
+      border-color: #52c41a; 
+      color: white; 
+    }
+
+    .task-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .edit-trigger-btn, .delete-cross-btn {
+      background: none;
+      border: none;
+      color: #8c8c8c;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .inline-edit-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+    .inline-edit-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      font-size: 16px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .inline-urgency-selector { display: flex; gap: 6px; align-items: center; }
+    .urgency-label { font-size: 0.75rem; font-weight: 600; color: var(--ward-chip-text); }
+    .urgency-opt-btn {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--btn-bg);
+      color: var(--ward-chip-text);
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .urgency-opt-btn.opt-high.selected { background: var(--high); color: white; border-color: var(--high); }
+    .urgency-opt-btn.opt-mid.selected { background: var(--mid); color: white; border-color: var(--mid); }
+    .urgency-opt-btn.opt-low.selected { background: var(--low); color: white; border-color: var(--low); }
+
+    footer { 
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg); 
+      padding: 8px 12px 8px; 
+      border-top: 1px solid var(--border); 
+      display: flex; 
+      flex-direction: column; 
+      gap: 6px;
+      z-index: 1000;
+    }
+    
+    .input-box { 
+      width: 100%; 
+      padding: 10px 12px; 
+      border: 1px solid var(--border); 
+      border-radius: 6px; 
+      font-size: 16px; 
+      outline: none; 
+      -webkit-appearance: none; 
+    }
+    .input-box:focus { border-color: var(--primary); }
+    .btn-group { display: flex; gap: 6px; }
+    .add-btn { flex: 1; padding: 8px; border: 1px solid var(--border); background: var(--btn-bg); border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+    .add-btn.high { color: var(--high); }
+    .add-btn.mid { color: var(--mid); }
+    .add-btn.low { color: var(--low); }
+
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal-content {
+      background: var(--card-bg); color: var(--text);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .close-modal-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8c8c8c; }
+    
+    .ward-select-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+    .ward-select-item {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--btn-bg);
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ward-select-item.selected { background: var(--ward-chip-bg); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+    .ward-select-item.clear-item { background: var(--ward-chip-bg); border-color: #ffa39e; color: #ff4d4f; }
+
+    .ward-manage-list { display: flex; flex-direction: column; gap: 6px; max-height: 250px; overflow-y: auto; }
+    .ward-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+    .item-controls { display: flex; gap: 4px; }
+    .icon-btn { background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 2px 4px; }
+    .modal-footer { display: flex; gap: 6px; }
+    .modal-input { background-color: var(--input-bg); color: var(--text); flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; -webkit-appearance: none; }
+
+    /* About / Disclaimer Modal Styles */
+    .about-body {
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .about-section-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container" id="app-container">
+    <div class="top-fixed-container" id="top-fixed">
+      <header>
+        <h1>⚡ Quick Tasks</h1>
+        <div class="header-actions">
+          <button class="info-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+          <button class="info-btn" onclick="openAboutModal()">⚙️ Main Settings</button>
+        </div>
+      </header>
+
+      
+
+      <div class="controls">
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="sort-time" onclick="setSort('time')">By time</button>
+          <button class="toggle-btn" id="sort-urgency" onclick="setSort('urgency')">By urgency</button>
+        </div>
+        <button class="clear-btn" onclick="clearAll()">Clear all</button>
+      </div>
+
+      <div class="ward-section">
+        <span class="ward-label">Ward:</span>
+        <div class="ward-chips" id="ward-chips"></div>
+        <button class="settings-btn" onclick="openWardModal()">⚙️ Settings</button>
+      </div>
+    </div>
+
+    <main id="main-content">
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">✓</div>
+        <p>No tasks</p>
+      </div>
+      <div id="task-list" class="task-list"></div>
+    </main>
+
+    <footer id="app-footer">
+      <input type="text" id="task-input" class="input-box" placeholder="New task..." onkeydown="if(event.key==='Enter') addTask('mid')">
+      <div class="btn-group">
+        <button class="add-btn high" onmousedown="event.preventDefault();" onclick="addTask('high')">+ High</button>
+        <button class="add-btn mid" onmousedown="event.preventDefault();" onclick="addTask('mid')">+ Mid</button>
+        <button class="add-btn low" onmousedown="event.preventDefault();" onclick="addTask('low')">+ Low</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Disclaimer & Acknowledgments Modal -->
+  
+<div id="about-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Main Settings</h3>
+        <button class="close-modal-btn" onclick="closeAboutModal()">&times;</button>
+      </div>
+      <div class="about-body">
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault();" onclick="exportTasks()">⬇️ Backup Data</button>
+        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault();" onclick="document.getElementById('import-file').click()">⬆️ Restore Data</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importTasks(event)">
+
+          
+
+          
+
+          <button class="add-btn" style="text-align: left; padding: 10px; color: var(--high); border-color: #ffccc7; background: #fff2f0;" onclick="factoryReset()">⚠️ Factory Reset (Clear All Data)</button>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 4px 0;">
+
+        <div>
+          <div class="about-section-title">🔒 Data Privacy & Disclaimer</div>
+          <p>All data stays strictly local to your browser storage. This application functions solely as an interface for displaying and organizing your local data. Please remember to back up your tasks regularly to prevent accidental data loss, which can occur if your browser cache or site data is cleared.</p>
+        </div>
+        <div>
+          <div class="about-section-title">🙏 Acknowledgments</div>
+          <p>We would like to express our deepest gratitude to <strong>Quick Med @ quick-med.up.railway.app</strong> for being a tremendous source of inspiration. Special thanks as well to <strong>GitHub</strong>, and our AI collaborator <strong>Gemini</strong>, for helping make this project possible.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <div id="task-ward-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Assign Ward</h3>
+        <button class="close-modal-btn" onclick="closeTaskWardModal()">&times;</button>
+      </div>
+      <div class="ward-select-list" id="task-ward-select-list"></div>
+    </div>
+  </div>
+
+  <div id="ward-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Wards</h3>
+        <button class="close-modal-btn" onclick="closeWardModal()">&times;</button>
+      </div>
+      <div class="modal-footer">
+        <input type="text" id="new-ward-input" class="modal-input" placeholder="New Ward Name...">
+        <button class="add-btn mid" style="flex: 0 0 auto; padding: 6px 10px;" onclick="addWardFromModal()">Add</button>
+      </div>
+      <div class="ward-manage-list" id="ward-manage-list"></div>
+    </div>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('qt_tasks')) || [];
+    let wards = JSON.parse(localStorage.getItem('qt_wards')) || [];
+    let selectedWard = 'All';
+    let editingTaskId = null;
+    let activeEditingTaskIdForWard = null;
+        let currentSort = 'time';
+
+    const urgencyMap = { high: 1, mid: 2, low: 3 };
+
+    function preventSafariInputScroll(el) {
+      if (!el) return;
+      el.addEventListener('focus', (e) => {
+        el.style.transform = 'translateY(-2000px)';
+        requestAnimationFrame(() => {
+          el.style.transform = '';
+          window.scrollTo(0, 0);
+        });
+      });
+    }
+
+    
+    let appContainer, footerElem, topFixedElem, mainContentElem;
+    let viewportUpdatePending = false;
+
+    function handleViewportResize() {
+      if (!window.visualViewport) return;
+      if (viewportUpdatePending) return;
+      viewportUpdatePending = true;
+
+      requestAnimationFrame(() => {
+        if (!appContainer) {
+          appContainer = document.getElementById('app-container');
+          footerElem = document.getElementById('app-footer');
+          topFixedElem = document.getElementById('top-fixed');
+          mainContentElem = document.getElementById('main-content');
+        }
+
+        appContainer.style.height = window.visualViewport.height + 'px';
+        appContainer.style.top = window.visualViewport.offsetTop + 'px';
+        mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
+        mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
+
+        window.scrollTo(0, 0);
+        viewportUpdatePending = false;
+      });
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize, { passive: true });
+      window.visualViewport.addEventListener('scroll', handleViewportResize, { passive: true });
+    }
+
+    
+    function toggleTheme() {
+      if (typeof gtag === 'function') gtag('event', 'theme_toggled');
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('qt_theme', next);
+      document.getElementById('theme-btn').innerText = next === 'light' ? '🌙' : '☀️';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('qt_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('theme-btn').innerText = '☀️';
+      }
+      setTimeout(handleViewportResize, 100);
+      preventSafariInputScroll(document.getElementById('task-input'));
+    
+    // Swipe gestures for changing wards
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    document.getElementById('main-content').addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.getElementById('main-content').addEventListener('touchend', e => {
+      if (editingTaskId !== null) return; // Disable swiping while editing
+
+      const touchEndX = e.changedTouches[0].screenX;
+      const touchEndY = e.changedTouches[0].screenY;
+
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Check if horizontal swipe is dominant and large enough
+      if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        const wardList = ['All', ...wards];
+        const currentIndex = wardList.indexOf(selectedWard);
+
+        if (deltaX < 0) {
+          // Swipe Left -> Next Ward
+          if (currentIndex < wardList.length - 1) {
+            selectWard(wardList[currentIndex + 1]);
+            // Scroll chips to make sure active ward is visible
+            const chipsContainer = document.getElementById('ward-chips');
+            const targetChip = chipsContainer.children[currentIndex + 1];
+            if (targetChip) targetChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        } else {
+          // Swipe Right -> Prev Ward
+          if (currentIndex > 0) {
+            selectWard(wardList[currentIndex - 1]);
+            // Scroll chips
+            const chipsContainer = document.getElementById('ward-chips');
+            const targetChip = chipsContainer.children[currentIndex - 1];
+            if (targetChip) targetChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        }
+      }
+    }, { passive: true });
+
+    });
+
+
+    document.addEventListener('click', function(e) {
+      if (editingTaskId === null) return;
+      const editContainer = document.querySelector(`[data-id="${editingTaskId}"]`);
+      if (editContainer && !editContainer.contains(e.target)) {
+        commitInlineEdit(editingTaskId);
+      }
+    });
+
+    
+    function openAboutModal() {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      document.getElementById('about-modal').style.display = 'flex';
+    }
+
+    function closeAboutModal() {
+      document.getElementById('about-modal').style.display = 'none';
+    }
+
+    function saveAndRender() {
+      localStorage.setItem('qt_tasks', JSON.stringify(tasks));
+      localStorage.setItem('qt_wards', JSON.stringify(wards));
+            renderWards();
+      renderWithAnimation();
+      setTimeout(handleViewportResize, 50);
+    }
+
+    function checkBackupReminder() {
+      const alertBox = document.getElementById('backup-alert');
+      const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      if (!lastBackupTime || (now - parseInt(lastBackupTime)) > ONE_DAY_MS) {
+        alertBox.style.display = 'flex';
+      } else {
+        alertBox.style.display = 'none';
+      }
+    }
+
+    function renderWards() {
+      const container = document.getElementById('ward-chips');
+      let html = `
+        <button class="ward-chip ${selectedWard === 'All' ? 'active' : ''}" onmousedown="event.preventDefault();" onclick="selectWard('All')">
+          All
+        </button>
+      `;
+
+      html += wards.map(w => `
+        <button class="ward-chip ${selectedWard === w ? 'active' : ''}" onmousedown="event.preventDefault();" onclick="selectWard('${escapeHtml(w)}')">
+          ${escapeHtml(w)}
+        </button>
+      `).join('');
+
+      container.innerHTML = html;
+
+      const input = document.getElementById('task-input');
+      input.placeholder = selectedWard === 'All' 
+        ? "New task (No ward assigned)..." 
+        : `New task for [${selectedWard}]...`;
+    }
+
+    function selectWard(ward) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+
+      const mainContent = document.getElementById('main-content');
+      if (mainContent) mainContent.scrollTop = 0;
+
+      selectedWard = ward;
+      const trackedWard = (ward === 'All' || ward === 'Ward') ? ward : 'custom_ward';
+      if (typeof gtag === 'function') gtag('event', 'ward_switched', { 'ward_type': trackedWard });
+      saveAndRender();
+
+      // Keep focus on input if we are rapidly adding tasks
+      const input = document.getElementById('task-input');
+      if (document.activeElement === input || input.value.length > 0) {
+        setTimeout(() => input.focus(), 10);
+      }
+    }
+
+    function addTask(priority) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      const input = document.getElementById('task-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const now = Date.now();
+      const assignedWard = selectedWard === 'All' ? null : selectedWard;
+
+      tasks.push({
+        id: now,
+        text: text,
+        priority: priority,
+        ward: assignedWard,
+        createdAt: now,
+        completed: false
+      });
+
+      input.value = '';
+      saveAndRender();
+
+      // Keep keyboard open for continuous entry
+      setTimeout(() => input.focus(), 10);
+    }
+
+        function startEditing(id, event) {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      if (editingTaskId !== null && editingTaskId !== id) {
+        commitInlineEdit(editingTaskId);
+      }
+      editingTaskId = id;
+      renderWithAnimation();
+
+      const input = document.getElementById(`edit-input-${id}`);
+      if (input) {
+        preventSafariInputScroll(input);
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+
+        // Use timeout only for scrolling so focus happens synchronously in the event handler
+        setTimeout(() => {
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 400);
+      }
+    }
+
+    function changeUrgencyDirect(id, priority, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const task = tasks.find(t => t.id === id);
+      if (task) task.priority = priority;
+      
+      const itemContainer = document.querySelector(`[data-id="${id}"]`);
+      if (itemContainer) {
+        const buttons = itemContainer.querySelectorAll('.urgency-opt-btn');
+        buttons.forEach(btn => {
+          btn.classList.remove('selected');
+          if (btn.classList.contains(`opt-${priority}`)) {
+            btn.classList.add('selected');
+          }
+        });
+      }
+    }
+
+    
+    function handleEditBlur(id) {
+      setTimeout(() => {
+        // If we are still editing this task and focus has completely left the input and not gone to an urgency button
+        if (editingTaskId === id) {
+           commitInlineEdit(id);
+        }
+      }, 150);
+    }
+
+    function commitInlineEdit(id) {
+      const input = document.getElementById(`edit-input-${id}`);
+      if (input) {
+        const text = input.value.trim();
+        if (text) {
+          const task = tasks.find(t => t.id === id);
+          if (task) task.text = text;
+        }
+      }
+      editingTaskId = null;
+      saveAndRender();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      if (editingTaskId === id) editingTaskId = null;
+      saveAndRender();
+    }
+
+    function openTaskWardModal(taskId) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      activeEditingTaskIdForWard = taskId;
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      const listContainer = document.getElementById('task-ward-select-list');
+      let html = `<div class="ward-select-item clear-item" onclick="assignWardToTask(null)">🚫 None (Clear Ward)</div>`;
+
+      if (wards.length === 0) {
+        html += `<div style="text-align:center; color:#8c8c8c; font-size:0.85rem; padding:12px;">No wards available. Create wards in Settings ⚙️ first!</div>`;
+      } else {
+        html += wards.map(w => {
+          const isSelected = task.ward === w;
+          return `
+            <div class="ward-select-item ${isSelected ? 'selected' : ''}" onclick="assignWardToTask('${escapeHtml(w)}')">
+              <span>${escapeHtml(w)}</span>
+              ${isSelected ? '<span>✓</span>' : ''}
+            </div>
+          `;
+        }).join('');
+      }
+
+      listContainer.innerHTML = html;
+      document.getElementById('task-ward-modal').style.display = 'flex';
+    }
+
+    function closeTaskWardModal() {
+      activeEditingTaskIdForWard = null;
+      document.getElementById('task-ward-modal').style.display = 'none';
+    }
+
+    function assignWardToTask(wardName) {
+      if (activeEditingTaskIdForWard) {
+        const task = tasks.find(t => t.id === activeEditingTaskIdForWard);
+        if (task) {
+          task.ward = wardName;
+          saveAndRender();
+        }
+      }
+      closeTaskWardModal();
+    }
+
+    function openWardModal() {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      renderWardModalList();
+      document.getElementById('ward-modal').style.display = 'flex';
+      preventSafariInputScroll(document.getElementById('new-ward-input'));
+    }
+
+    function closeWardModal() {
+      document.getElementById('ward-modal').style.display = 'none';
+    }
+
+    function renderWardModalList() {
+      const listContainer = document.getElementById('ward-manage-list');
+      if (wards.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#8c8c8c; font-size:0.85rem; padding:12px;">No wards created yet.</div>';
+        return;
+      }
+
+      listContainer.innerHTML = wards.map((w, index) => `
+        <div class="ward-manage-item">
+          <span>${escapeHtml(w)}</span>
+          <div class="item-controls">
+            <button class="icon-btn" onclick="moveWard(${index}, -1)" ${index === 0 ? 'disabled' : ''}>▲</button>
+            <button class="icon-btn" onclick="moveWard(${index}, 1)" ${index === wards.length - 1 ? 'disabled' : ''}>▼</button>
+            <button class="icon-btn" onclick="renameWard(${index})">✏️</button>
+            <button class="icon-btn" style="color:#ff4d4f" onclick="deleteWard(${index})">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addWardFromModal() {
+      const input = document.getElementById('new-ward-input');
+      const val = input.value.trim();
+      if (!val) return;
+      if (val.toLowerCase() === 'all') {
+        alert("Cannot use 'All' as a ward name.");
+        return;
+      }
+      if (!wards.includes(val)) {
+        wards.push(val);
+        input.value = '';
+        saveAndRender();
+        renderWardModalList();
+      }
+    }
+
+    function moveWard(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= wards.length) return;
+      const temp = wards[index];
+      wards[index] = wards[targetIndex];
+      wards[targetIndex] = temp;
+      saveAndRender();
+      renderWardModalList();
+    }
+
+    function renameWard(index) {
+      const current = wards[index];
+      const updated = prompt("Rename ward:", current);
+      if (updated && updated.trim() && updated.trim() !== current) {
+        const newName = updated.trim();
+        tasks.forEach(t => { if (t.ward === current) t.ward = newName; });
+        if (selectedWard === current) selectedWard = newName;
+        wards[index] = newName;
+        saveAndRender();
+        renderWardModalList();
+      }
+    }
+
+    function deleteWard(index) {
+      const target = wards[index];
+      if (confirm(`Delete ward "${target}"?`)) {
+        wards.splice(index, 1);
+        if (selectedWard === target) selectedWard = 'All';
+        saveAndRender();
+        renderWardModalList();
+      }
+    }
+
+    function setSort(mode) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      currentSort = mode;
+      document.getElementById('sort-time').classList.toggle('active', mode === 'time');
+      document.getElementById('sort-urgency').classList.toggle('active', mode === 'urgency');
+      renderWithAnimation();
+    }
+
+    function formatDate(timestamp) {
+      const d = new Date(timestamp);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${day}/${month} ${hours}:${minutes}:${seconds}`;
+    }
+
+    function toggleTask(id) {
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      tasks = tasks.map(task => {
+        if (task.id === id) {
+          if (typeof gtag === 'function') gtag('event', 'task_toggled', { 'is_completed': !task.completed });
+          return { ...task, completed: !task.completed };
+        }
+        return task;
+      });
+      saveAndRender();
+    }
+
+    function clearAll() {
+      if (confirm('Clear all tasks?')) {
+        tasks = [];
+        editingTaskId = null;
+        saveAndRender();
+      }
+    }
+
+    
+    function factoryReset() {
+      if (confirm('⚠️ WARNING: This will permanently delete ALL tasks and ALL wards. You cannot undo this action! Please make sure you have backed up your data first if you need it.\n\nAre you absolutely sure you want to factory reset?')) {
+        localStorage.removeItem('qt_tasks');
+        localStorage.removeItem('qt_wards');
+        tasks = [];
+        wards = [];
+        saveAndRender();
+        closeAboutModal();
+        alert('All data has been wiped. App is now in its initial state.');
+      }
+    }
+
+    function exportTasks() {
+      if (typeof gtag === 'function') gtag('event', 'backup_used');
+      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      if (tasks.length === 0 && wards.length === 0) {
+        alert("No tasks or wards available to backup.");
+        return;
+      }
+
+      const now = Date.now();
+      
+
+      const d = new Date();
+      const filename = `quick_tasks_backup_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}.json`;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ tasks, wards }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", filename);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+          }
+
+    function importTasks(event) {
+      const fileReader = new FileReader();
+      fileReader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            tasks = imported;
+          } else if (imported.tasks || imported.wards) {
+            tasks = imported.tasks || [];
+            if (imported.wards) wards = imported.wards;
+          }
+          selectedWard = 'All';
+          editingTaskId = null;
+          saveAndRender();
+          alert("Backup restored!");
+        } catch (err) {
+          alert("Error reading backup file.");
+        }
+      };
+      if (event.target.files[0]) fileReader.readAsText(event.target.files[0]);
+    }
+
+    function getSortedTasks() {
+      let filtered = selectedWard === 'All' ? tasks : tasks.filter(t => t.ward === selectedWard);
+      const sortTasks = (list) => {
+        return [...list].sort((a, b) => {
+          if (currentSort === 'urgency') {
+            return urgencyMap[a.priority] - urgencyMap[b.priority] || b.createdAt - a.createdAt;
+          }
+          return b.createdAt - a.createdAt;
+        });
+      };
+      return [...sortTasks(filtered.filter(t => !t.completed)), ...sortTasks(filtered.filter(t => t.completed))];
+    }
+
+
+    function renderWithAnimation() {
+      const listContainer = document.getElementById('task-list');
+      const emptyState = document.getElementById('empty-state');
+
+      const taskNodes = listContainer.querySelectorAll('.task-item');
+      const firstPositions = {};
+      taskNodes.forEach(node => {
+        const id = node.getAttribute('data-id');
+        firstPositions[id] = node.getBoundingClientRect();
+      });
+
+      const sortedTasks = getSortedTasks();
+
+      if (sortedTasks.length === 0) {
+        emptyState.style.display = 'block';
+        listContainer.innerHTML = '';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      listContainer.innerHTML = sortedTasks.map(task => {
+        const isEditing = editingTaskId === task.id;
+
+        // --- ORIGINAL HTML GENERATION ---
+        
+        if (isEditing) {
+          return `
+            <div class="task-item" data-id="${task.id}">
+              <div class="inline-edit-container">
+                <input type="text" id="edit-input-${task.id}" class="inline-edit-input" value="${escapeHtml(task.text)}" enterkeyhint="done" onkeydown="if(event.key==='Enter') commitInlineEdit(${task.id})" onblur="handleEditBlur(${task.id})">
+                <div class="inline-urgency-selector">
+                  <span class="urgency-label">Urgency:</span>
+                  <button type="button" class="urgency-opt-btn opt-high ${task.priority === 'high' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'high', event)" onclick="changeUrgencyDirect(${task.id}, 'high', event)">High</button>
+                  <button type="button" class="urgency-opt-btn opt-mid ${task.priority === 'mid' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'mid', event)" onclick="changeUrgencyDirect(${task.id}, 'mid', event)">Mid</button>
+                  <button type="button" class="urgency-opt-btn opt-low ${task.priority === 'low' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'low', event)" onclick="changeUrgencyDirect(${task.id}, 'low', event)">Low</button>
+                </div>
+              </div>
+
+            </div>
+          `;
+        }
+
+        return `
+          <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+            <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">✓</button>
+            <div class="task-left">
+              <div class="task-details">
+                <div class="badges">
+                  <span class="badge badge-${task.priority}">${task.priority}</span>
+                  ${task.ward 
+                    ? `<span class="badge badge-ward" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)} ✏️</span>` 
+                    : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`
+                  }
+                  <span class="task-time">${formatDate(task.createdAt)}</span>
+                </div>
+                <span class="task-text">${escapeHtml(task.text)}</span>
+              </div>
+            </div>
+            <div class="task-actions-right">
+              <button class="edit-trigger-btn" onclick="startEditing(${task.id}, event)">✏️</button>
+              <button class="delete-cross-btn" onclick="deleteTask(${task.id})">❌</button>
+            </div>
+          </div>
+        `;
+        // --- END ORIGINAL HTML GENERATION ---
+
+      }).join('');
+
+      const newTaskNodes = listContainer.querySelectorAll('.task-item');
+
+      newTaskNodes.forEach(node => {
+        const id = node.getAttribute('data-id');
+        const first = firstPositions[id];
+        if (first) {
+          const last = node.getBoundingClientRect();
+          const deltaY = first.top - last.top;
+
+          if (deltaY !== 0) {
+            node.style.transition = 'none';
+            node.style.transform = `translateY(${deltaY}px)`;
+            node.style.zIndex = '100';
+
+            node.getBoundingClientRect(); // reflow
+
+            requestAnimationFrame(() => {
+              node.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+              node.style.transform = 'translateY(0)';
+              setTimeout(() => { node.style.zIndex = ''; }, 400);
+            });
+          }
+        } else {
+          node.style.transition = 'none';
+          node.style.opacity = '0';
+          node.style.transform = 'translateY(-10px)';
+          node.getBoundingClientRect();
+          requestAnimationFrame(() => {
+            node.style.transition = 'all 0.4s ease';
+            node.style.opacity = '';
+            node.style.transform = 'translateY(0)';
+          });
+        }
+      });
+    }
+
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    saveAndRender();
+  </script>
+</body>
+</html>
