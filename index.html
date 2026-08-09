@@ -171,7 +171,6 @@
     .toggle-btn.active {
       background: var(--card-bg);
       color: var(--text);
-      color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -262,7 +261,7 @@
       flex-direction: column;
       gap: 6px;
       position: relative;
-      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
+      min-height: calc(100% + 1px);
     }
 
     .task-item {
@@ -595,16 +594,20 @@
       bottom: 80px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
+      padding: 10px 20px;
+      border-radius: 12px;
       font-size: 0.85rem;
       z-index: 3000;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s ease;
-      white-space: nowrap;
+      white-space: normal;
+      word-wrap: break-word;
+      max-width: 90%;
+      text-align: center;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -797,7 +800,7 @@
       toast.innerText = message;
       toast.style.opacity = '1';
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+      toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000); // 3 seconds to read longer messages
     }
 
     // Dynamic color generator for Wards
@@ -840,18 +843,11 @@
         appContainer.style.top = window.visualViewport.offsetTop + 'px';
         mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
         mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
-        window.scrollTo(0, 0);
         
-        // Ensure the editing task stays visible when keyboard resizes the viewport
         if (editingTaskId !== null) {
           const editInput = document.getElementById(`edit-input-${editingTaskId}`);
           if (editInput) {
-             const rect = editInput.getBoundingClientRect();
-             const viewHeight = window.visualViewport.height;
-             // If input is trapped under the keyboard (lower half) or above screen
-             if (rect.top > viewHeight / 2 || rect.bottom < 0) {
-                 window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'auto' });
-             }
+             editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
         }
         
@@ -982,26 +978,17 @@
 
       const input = document.getElementById(`edit-input-${id}`);
       if (input) {
-        preventSafariInputScroll(input);
+        // Explicitly NOT calling preventSafariInputScroll here to prevent the jumping bug!
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         
-        // Use instant auto-scroll behavior for much faster mobile keyboard reaction
+        // Let the keyboard rise naturally, then ensure it's in view
         setTimeout(() => {
           const editInputRef = document.getElementById(`edit-input-${id}`);
           if (editInputRef) {
-            editInputRef.scrollIntoView({ behavior: 'auto', block: 'center' });
-            
-            // Secondary fallback if visualViewport resize takes a long time
-            setTimeout(() => {
-                const rect = editInputRef.getBoundingClientRect();
-                const viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                if (rect.top > viewHeight / 2 || rect.bottom < 0) {
-                    window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'auto' });
-                }
-            }, 100);
+            editInputRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }
-        }, 50);
+        }, 150);
       }
     }
 
@@ -1122,7 +1109,7 @@
               <button class="icon-btn" onclick="moveWard(${index}, -1)" ${index===1 ? 'disabled' : ''}>⬆️</button>
               <button class="icon-btn" onclick="moveWard(${index}, 1)" ${index===wards.length-1 ? 'disabled' : ''}>⬇️</button>
               <button class="icon-btn" onclick="renameWard(${index})">✎</button>
-              <button class="icon-btn" style="color:#ff4d4f;" onclick="deleteWard(${index})">✕</button>
+              <button class="icon-btn" style="color:#ff4d4f;" onclick="deleteWard(${index})">&times;</button>
             </div>
           </div>
         `;
@@ -1370,7 +1357,7 @@
               </div>
               <div class="task-actions-right">
                 <button class="edit-trigger-btn" onclick="startEditing(${task.id}, event)">✎</button>
-                <button class="delete-cross-btn" onclick="deleteTask(${task.id})">✕</button>
+                <button class="delete-cross-btn" onclick="deleteTask(${task.id})">&times;</button>
               </div>
             </div>
           `;
