@@ -171,6 +171,7 @@
     .toggle-btn.active {
       background: var(--card-bg);
       color: var(--text);
+      color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -244,6 +245,8 @@
       -webkit-overflow-scrolling: touch;
       padding-top: calc(130px + env(safe-area-inset-top, 0px)); 
       padding-bottom: calc(45vh + env(safe-area-inset-bottom, 0px));
+      /* Add smooth scrolling to the main container */
+      scroll-behavior: smooth;
     }
 
     .empty-state {
@@ -261,7 +264,7 @@
       flex-direction: column;
       gap: 6px;
       position: relative;
-      min-height: calc(100% + 1px);
+      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
     }
 
     .task-item {
@@ -329,12 +332,16 @@
     .badge-low { background-color: var(--low); }
     
     .badge-ward {
-      background-color: #722ed1;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 2px;
+      border: 1px solid rgba(0,0,0,0.1);
     }
+    [data-theme="dark"] .badge-ward {
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
     .badge-no-ward {
       background-color: #e9ecef;
       color: var(--ward-chip-text);
@@ -363,6 +370,7 @@
       justify-content: center;
       flex-shrink: 0;
     }
+    /* SVG Tick logic */
     .task-item.completed .action-btn {
       background-color: #52c41a !important;
       border-color: #52c41a !important;
@@ -803,26 +811,24 @@
       toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000); // 3 seconds to read longer messages
     }
 
-    // Dynamic color generator for Wards
+    // Dynamic color generator for Wards (Vibrant Distinct Colors)
+    const distinctWardColors = [
+      '#D81B60', '#8E24AA', '#5E35B1', '#3949AB', '#039BE5', 
+      '#00ACC1', '#00897B', '#43A047', '#689F38', '#EF6C00', 
+      '#D84315', '#6D4C41', '#546E7A', '#455A64', '#C0CA33',
+      '#FDD835', '#FFB300', '#F4511E', '#8D6E63', '#78909C'
+    ];
+
     function getWardColor(wardName) {
-      if (!wardName || wardName === 'All') return ''; // Empty string so it falls back to CSS logic if needed
+      if (!wardName || wardName === 'All') return '';
       let hash = 0;
       for (let i = 0; i < wardName.length; i++) {
-        hash = wardName.charCodeAt(i) + ((hash << 5) - hash);
+        hash = ((hash << 5) - hash) + wardName.charCodeAt(i);
+        hash |= 0; // Convert to 32bit int
       }
-      const h = Math.abs(hash) % 360;
-      return `hsl(${h}, 65%, 45%)`;
-    }
-
-    function preventSafariInputScroll(el) {
-      if (!el) return;
-      el.addEventListener('focus', (e) => {
-        el.style.transform = 'translateY(-2000px)';
-        requestAnimationFrame(() => {
-          el.style.transform = '';
-          window.scrollTo(0, 0);
-        });
-      });
+      // Ensure positive index
+      const index = Math.abs(hash) % distinctWardColors.length;
+      return distinctWardColors[index];
     }
 
     let appContainer, footerElem, topFixedElem, mainContentElem;
@@ -843,14 +849,7 @@
         appContainer.style.top = window.visualViewport.offsetTop + 'px';
         mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
         mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
-        
-        if (editingTaskId !== null) {
-          const editInput = document.getElementById(`edit-input-${editingTaskId}`);
-          if (editInput) {
-             editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-        
+        window.scrollTo(0, 0);
         viewportUpdatePending = false;
       });
     }
@@ -876,7 +875,6 @@
         document.getElementById('theme-btn').innerText = '🌙';
       }
       setTimeout(handleViewportResize, 100);
-      preventSafariInputScroll(document.getElementById('task-input'));
     });
     
     document.addEventListener('click', function(e) {
@@ -963,7 +961,7 @@
 
       input.value = '';
       
-      saveAndRender(`Add task: '${text}'`);
+      saveAndRender(`Added task: '${text}'`);
       showToast(`Added task: '${text}'`);
       
       setTimeout(() => input.focus(), 10);
@@ -982,13 +980,21 @@
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         
-        // Let the keyboard rise naturally, then ensure it's in view
+        // Directly scroll the parent container itself without relying on scrollIntoView jumping the body
         setTimeout(() => {
           const editInputRef = document.getElementById(`edit-input-${id}`);
-          if (editInputRef) {
-            editInputRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const mainContent = document.getElementById('main-content');
+          if (editInputRef && mainContent) {
+            const inputRect = editInputRef.getBoundingClientRect();
+            const mainRect = mainContent.getBoundingClientRect();
+            // If it's near the bottom (where the keyboard pops up), scroll the container down
+            if (inputRect.bottom > mainRect.bottom - 150 || inputRect.top < mainRect.top) {
+                const offsetTop = inputRect.top - mainRect.top + mainContent.scrollTop;
+                // Subtracting 150 keeps it cleanly in the upper middle
+                mainContent.scrollTo({ top: offsetTop - 150, behavior: 'smooth' });
+            }
           }
-        }, 150);
+        }, 150); // Small delay allows keyboard to rise first
       }
     }
 
@@ -1057,7 +1063,7 @@
           if (w === 'All') return '';
           const isSelected = task.ward === w;
           return `<div class="ward-select-item ${isSelected ? 'selected' : ''}" onclick="assignWardToTask('${escapeHtml(w)}')">
-                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span>✔</span>' : ''}
+                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span>&#10004;</span>' : ''}
                   </div>`;
         }).join('');
       }
@@ -1087,7 +1093,6 @@
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       renderWardModalList();
       document.getElementById('ward-modal').style.display = 'flex';
-      preventSafariInputScroll(document.getElementById('new-ward-input'));
     }
 
     function closeWardModal() {
@@ -1341,14 +1346,17 @@
           `;
         }
 
+        // Only show tick SVG when task is completed
+        const tickSvg = task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">${task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</button>
+              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">${tickSvg}</button>
               <div class="task-left">
                 <div class="task-details">
                   <div class="badges">
                     <span class="badge badge-${task.priority}">${task.priority}</span>
-                    ${task.ward ? `<span class="badge badge-ward" style="${task.ward !== 'All' ? 'background-color:'+getWardColor(task.ward)+';' : ''}" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
+                    ${task.ward ? `<span class="badge badge-ward" style="${task.ward !== 'All' ? 'background-color:'+getWardColor(task.ward)+'; border: none;' : ''}" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
                     <span class="task-time">${formatDate(task.createdAt)}</span>
                     ${task.completed && task.completedAt ? `<span class="task-time">(Fin: ${formatDate(task.completedAt)})</span>` : ''}
                   </div>
