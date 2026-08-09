@@ -171,6 +171,7 @@
     .toggle-btn.active {
       background: var(--card-bg);
       color: var(--text);
+      color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -364,12 +365,14 @@
       flex-shrink: 0;
     }
     .task-item.completed .action-btn {
-      background-color: #52c41a;
-      border-color: #52c41a;
-      color: white;
+      background-color: #52c41a !important;
+      border-color: #52c41a !important;
+      color: white !important;
     }
     [data-theme="dark"] .task-item.completed .action-btn {
-      background-color: #81c784; border-color: #81c784;
+      background-color: #52c41a !important; 
+      border-color: #52c41a !important;
+      color: white !important;
     }
 
     .task-actions-right {
@@ -834,6 +837,15 @@
         mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
         mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
         window.scrollTo(0, 0);
+        
+        // Ensure the editing task stays visible when keyboard resizes the viewport
+        if (editingTaskId !== null) {
+          const editInput = document.getElementById(`edit-input-${editingTaskId}`);
+          if (editInput) {
+             editInput.scrollIntoView({ behavior: 'auto', block: 'center' });
+          }
+        }
+        
         viewportUpdatePending = false;
       });
     }
@@ -962,10 +974,14 @@
         preventSafariInputScroll(input);
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
-        // Reduced delay and instant scroll behavior to fix slow phone auto-scroll
+        
+        // Wait long enough for mobile keyboards to slide up if visualViewport isn't completely perfect
         setTimeout(() => {
-          input.scrollIntoView({ behavior: 'auto', block: 'center' });
-        }, 50);
+          const editInputRef = document.getElementById(`edit-input-${id}`);
+          if (editInputRef) {
+            editInputRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
       }
     }
 
@@ -1279,7 +1295,7 @@
 
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">✔</button>
+              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">&#10004;</button>
               <div class="task-left">
                 <div class="task-details">
                   <div class="badges">
