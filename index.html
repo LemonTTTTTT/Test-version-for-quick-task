@@ -245,8 +245,8 @@
       -webkit-overflow-scrolling: touch;
       padding-top: calc(130px + env(safe-area-inset-top, 0px)); 
       padding-bottom: calc(45vh + env(safe-area-inset-bottom, 0px));
-      /* Add smooth scrolling to the main container */
-      scroll-behavior: smooth;
+      /* Disable smooth scrolling on the main container as we're not jumping anymore */
+      scroll-behavior: auto;
     }
 
     .empty-state {
@@ -398,21 +398,61 @@
       border-radius: 4px;
     }
 
-    .inline-edit-container {
+    /* Fixed Edit Modal Overlay */
+    .edit-overlay-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end; /* Align to bottom for keyboard ease */
+      z-index: 3000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .edit-overlay-content {
+      background: var(--card-bg);
+      width: 100%;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      width: 100%;
+      gap: 12px;
+      /* Animation to slide up */
+      animation: slideUpEdit 0.2s ease-out;
     }
-    .inline-edit-input {
+
+    @keyframes slideUpEdit {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .edit-overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .edit-overlay-input {
       width: 100%;
-      padding: 8px 10px;
+      padding: 12px;
       border: 1px solid var(--primary);
-      border-radius: 6px;
-      font-size: 16px; 
+      border-radius: 8px;
+      font-size: 16px; /* 16px prevents iOS auto-zoom */
+      background: var(--input-bg);
+      color: var(--text);
       outline: none;
       -webkit-appearance: none;
     }
+
     .inline-urgency-selector {
       display: flex;
       gap: 6px;
@@ -425,19 +465,48 @@
     }
     .urgency-opt-btn {
       flex: 1;
-      padding: 6px;
+      padding: 8px;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
       font-weight: 600;
       background: var(--btn-bg);
       color: var(--ward-chip-text);
       cursor: pointer;
       text-transform: uppercase;
+      transition: all 0.2s;
     }
     .urgency-opt-btn.opt-high.selected { background: var(--high); color: white; border-color: var(--high); }
     .urgency-opt-btn.opt-mid.selected { background: var(--mid); color: white; border-color: var(--mid); }
     .urgency-opt-btn.opt-low.selected { background: var(--low); color: white; border-color: var(--low); }
+    
+    .edit-overlay-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .edit-save-btn {
+      flex: 2;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .edit-cancel-btn {
+      flex: 1;
+      background: var(--btn-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
 
     footer {
       position: absolute;
@@ -607,7 +676,7 @@
       padding: 10px 20px;
       border-radius: 12px;
       font-size: 0.85rem;
-      z-index: 3000;
+      z-index: 4000;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s ease;
@@ -672,6 +741,27 @@
 <!-- Toast Notification -->
 <div id="toast-container"></div>
 
+<!-- Mobile Edit Overlay -->
+<div id="mobile-edit-overlay" class="edit-overlay-backdrop" style="display: none;" onclick="closeMobileEdit(event)">
+  <div class="edit-overlay-content" onclick="event.stopPropagation()">
+    <div class="edit-overlay-header">
+      <span>Edit Task</span>
+      <button class="close-modal-btn" onclick="closeMobileEdit()">&times;</button>
+    </div>
+    <input type="text" id="mobile-edit-input" class="edit-overlay-input" placeholder="Task text..." onkeydown="if(event.key==='Enter') saveMobileEdit()">
+    <div class="inline-urgency-selector">
+      <span class="urgency-label">Urgency:</span>
+      <button type="button" id="mobile-edit-high" class="urgency-opt-btn opt-high" onclick="setMobileEditUrgency('high')">High</button>
+      <button type="button" id="mobile-edit-mid" class="urgency-opt-btn opt-mid" onclick="setMobileEditUrgency('mid')">Mid</button>
+      <button type="button" id="mobile-edit-low" class="urgency-opt-btn opt-low" onclick="setMobileEditUrgency('low')">Low</button>
+    </div>
+    <div class="edit-overlay-actions">
+      <button class="edit-cancel-btn" onclick="closeMobileEdit()">Cancel</button>
+      <button class="edit-save-btn" onclick="saveMobileEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Disclaimer & Acknowledgments Modal -->
 <div id="about-modal" class="modal-backdrop" style="display: none;">
   <div class="modal-content">
@@ -727,8 +817,11 @@
     let tasks = JSON.parse(localStorage.getItem('qt_tasks')) || [];
     let wards = JSON.parse(localStorage.getItem('qt_wards')) || ['All'];
     let selectedWard = 'All';
-    let editingTaskId = null;
+    
+    // We no longer use inline editing, we use the overlay
     let activeEditingTaskIdForWard = null;
+    let mobileEditActiveId = null;
+    let mobileEditTempPriority = 'mid';
     
     let currentSort = 'time';
     let sortDirection = { 'time': 1, 'urgency': 1, 'finish': 1 };
@@ -808,27 +901,40 @@
       toast.innerText = message;
       toast.style.opacity = '1';
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000); // 3 seconds to read longer messages
+      toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000); 
     }
 
-    // Dynamic color generator for Wards (Vibrant Distinct Colors)
+    // Dynamic color generator for Wards (Dark/Rich palette for white text contrast)
     const distinctWardColors = [
-      '#D81B60', '#8E24AA', '#5E35B1', '#3949AB', '#039BE5', 
-      '#00ACC1', '#00897B', '#43A047', '#689F38', '#EF6C00', 
-      '#D84315', '#6D4C41', '#546E7A', '#455A64', '#C0CA33',
-      '#FDD835', '#FFB300', '#F4511E', '#8D6E63', '#78909C'
+      '#B71C1C', '#880E4F', '#4A148C', '#311B92', '#1A237E', 
+      '#0D47A1', '#01579B', '#006064', '#004D40', '#1B5E20', 
+      '#33691E', '#E65100', '#BF360C', '#3E2723', '#263238',
+      '#FF6F00', '#F57F17', '#424242', '#5D4037', '#607D8B'
     ];
 
     function getWardColor(wardName) {
-      if (!wardName || wardName === 'All') return '';
+      if (!wardName || wardName === 'All') return ''; 
       let hash = 0;
       for (let i = 0; i < wardName.length; i++) {
         hash = ((hash << 5) - hash) + wardName.charCodeAt(i);
-        hash |= 0; // Convert to 32bit int
+        hash |= 0; 
       }
-      // Ensure positive index
       const index = Math.abs(hash) % distinctWardColors.length;
       return distinctWardColors[index];
+    }
+
+    function preventSafariInputScroll(el) {
+      if (!el) return;
+      el.addEventListener('focus', (e) => {
+        // Only trigger the fix if we are strictly using the bottom bar
+        if(el.id === 'task-input') {
+            el.style.transform = 'translateY(-2000px)';
+            requestAnimationFrame(() => {
+              el.style.transform = '';
+              window.scrollTo(0, 0);
+            });
+        }
+      });
     }
 
     let appContainer, footerElem, topFixedElem, mainContentElem;
@@ -875,18 +981,10 @@
         document.getElementById('theme-btn').innerText = '🌙';
       }
       setTimeout(handleViewportResize, 100);
-    });
-    
-    document.addEventListener('click', function(e) {
-      if (editingTaskId === null) return;
-      const editContainer = document.querySelector(`[data-id="${editingTaskId}"]`);
-      if (editContainer && !editContainer.contains(e.target)) {
-        commitInlineEdit(editingTaskId);
-      }
+      preventSafariInputScroll(document.getElementById('task-input'));
     });
 
     function openAboutModal() {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       document.getElementById('about-modal').style.display = 'flex';
     }
     
@@ -904,7 +1002,6 @@
       
       renderWards();
       
-      // Performance fix: If there are many tasks, automatically skip animation to avoid lagging
       const shouldSkipAnim = skipAnimation || tasks.length > 50; 
       renderWithAnimation(shouldSkipAnim);
       setTimeout(handleViewportResize, 50);
@@ -924,14 +1021,13 @@
     }
 
     function selectWard(ward) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       const mainContent = document.getElementById('main-content');
       if (mainContent) mainContent.scrollTop = 0;
       selectedWard = ward;
       const trackedWard = (ward === 'All' || ward === 'Ward') ? ward : 'custom_ward';
       if (typeof gtag === 'function') gtag('event', 'ward_switched', { 'ward_type': trackedWard });
       
-      saveAndRender("Switch ward", true, true); // Don't push to undo history just for switching tabs
+      saveAndRender("Switch ward", true, true); 
       
       const input = document.getElementById('task-input');
       if (document.activeElement === input && input.value.length === 0) {
@@ -940,7 +1036,6 @@
     }
 
     function addTask(priority) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       const input = document.getElementById('task-input');
       const text = input.value.trim();
       if (!text) return;
@@ -960,95 +1055,82 @@
       });
 
       input.value = '';
-      
-      saveAndRender(`Added task: '${text}'`);
+      saveAndRender(`Add task: '${text}'`);
       showToast(`Added task: '${text}'`);
       
       setTimeout(() => input.focus(), 10);
     }
 
+    // --- NEW MODAL EDIT SYSTEM (Fixes the jumping bug) ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
-      if (editingTaskId !== null && editingTaskId !== id) commitInlineEdit(editingTaskId);
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
       
-      editingTaskId = id;
-      renderWithAnimation(true);
-
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
-        // Explicitly NOT calling preventSafariInputScroll here to prevent the jumping bug!
+      mobileEditActiveId = id;
+      const input = document.getElementById('mobile-edit-input');
+      input.value = task.text;
+      
+      setMobileEditUrgency(task.priority);
+      
+      // Show overlay
+      document.getElementById('mobile-edit-overlay').style.display = 'flex';
+      
+      // Focus after small delay so modal is fully visible
+      setTimeout(() => {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
-        
-        // Directly scroll the parent container itself without relying on scrollIntoView jumping the body
-        setTimeout(() => {
-          const editInputRef = document.getElementById(`edit-input-${id}`);
-          const mainContent = document.getElementById('main-content');
-          if (editInputRef && mainContent) {
-            const inputRect = editInputRef.getBoundingClientRect();
-            const mainRect = mainContent.getBoundingClientRect();
-            // If it's near the bottom (where the keyboard pops up), scroll the container down
-            if (inputRect.bottom > mainRect.bottom - 150 || inputRect.top < mainRect.top) {
-                const offsetTop = inputRect.top - mainRect.top + mainContent.scrollTop;
-                // Subtracting 150 keeps it cleanly in the upper middle
-                mainContent.scrollTo({ top: offsetTop - 150, behavior: 'smooth' });
-            }
+      }, 50);
+    }
+    
+    function setMobileEditUrgency(priority) {
+        mobileEditTempPriority = priority;
+        document.getElementById('mobile-edit-high').classList.remove('selected');
+        document.getElementById('mobile-edit-mid').classList.remove('selected');
+        document.getElementById('mobile-edit-low').classList.remove('selected');
+        document.getElementById(`mobile-edit-${priority}`).classList.add('selected');
+    }
+
+    function closeMobileEdit(e) {
+      if (e && e.target !== document.getElementById('mobile-edit-overlay') && e.target.className !== 'edit-cancel-btn') return;
+      document.getElementById('mobile-edit-overlay').style.display = 'none';
+      mobileEditActiveId = null;
+    }
+
+    function saveMobileEdit() {
+      if (!mobileEditActiveId) return;
+      const input = document.getElementById('mobile-edit-input');
+      const text = input.value.trim();
+      if (!text) {
+          alert('Task text cannot be empty');
+          return;
+      }
+      
+      const task = tasks.find(t => t.id === mobileEditActiveId);
+      if (task) {
+          if (task.text !== text || task.priority !== mobileEditTempPriority) {
+              task.text = text;
+              task.priority = mobileEditTempPriority;
+              saveAndRender(`Edit task`);
+              showToast(`Saved edits`);
           }
-        }, 150); // Small delay allows keyboard to rise first
       }
+      
+      // Close overlay and hide keyboard
+      input.blur();
+      closeMobileEdit();
     }
-
-    function changeUrgencyDirect(id, priority, event) {
-      if (event) { event.preventDefault(); event.stopPropagation(); }
-      const task = tasks.find(t => t.id === id);
-      if (task) task.priority = priority;
-      const itemContainer = document.querySelector(`[data-id="${id}"]`);
-      if (itemContainer) {
-         const buttons = itemContainer.querySelectorAll('.urgency-opt-btn');
-         buttons.forEach(btn => btn.classList.remove('selected'));
-         const btn = itemContainer.querySelector(`.opt-${priority}`);
-         if (btn) btn.classList.add('selected');
-      }
-    }
-
-    function handleEditBlur(id) {
-      setTimeout(() => {
-        if (editingTaskId === id) {
-          commitInlineEdit(id);
-        }
-      }, 150);
-    }
-
-    function commitInlineEdit(id) {
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
-        const text = input.value.trim();
-        if (text) {
-          const task = tasks.find(t => t.id === id);
-          if (task && task.text !== text) {
-            task.text = text;
-            editingTaskId = null;
-            saveAndRender(`Edited task`);
-            showToast(`Saved edits`);
-            return;
-          }
-        }
-      }
-      editingTaskId = null;
-      saveAndRender("Edit task", true, true); // No change, skip history
-    }
+    // -----------------------------------------------------
 
     function deleteTask(id) {
       const task = tasks.find(t => t.id === id);
       tasks = tasks.filter(t => t.id !== id);
-      if (editingTaskId === id) editingTaskId = null;
       const fullText = task ? task.text : 'task';
       saveAndRender(`Delete task: '${fullText}'`);
       showToast(`Deleted task: '${fullText}'`);
     }
 
     function openTaskWardModal(taskId) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       activeEditingTaskIdForWard = taskId;
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
@@ -1063,7 +1145,7 @@
           if (w === 'All') return '';
           const isSelected = task.ward === w;
           return `<div class="ward-select-item ${isSelected ? 'selected' : ''}" onclick="assignWardToTask('${escapeHtml(w)}')">
-                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span>&#10004;</span>' : ''}
+                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
                   </div>`;
         }).join('');
       }
@@ -1090,7 +1172,6 @@
     }
 
     function openWardModal() {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       renderWardModalList();
       document.getElementById('ward-modal').style.display = 'flex';
     }
@@ -1171,8 +1252,6 @@
     }
 
     function setSort(mode) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
-      
       if (currentSort === mode) {
         sortDirection[mode] *= -1; // Reverse direction
       }
@@ -1183,7 +1262,7 @@
       const sf = document.getElementById('sort-finish');
       if (sf) sf.classList.toggle('active', mode === 'finish');
       
-      renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
+      renderWithAnimation(tasks.length > 50);
       
       let sortMsg = '';
       if (mode === 'time' || mode === 'finish') {
@@ -1206,7 +1285,6 @@
 
     function toggleTask(id) {
       let actionType = "Toggle task";
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       tasks = tasks.map(task => {
         if (task.id === id) {
           actionType = task.completed ? `Uncompleted: '${task.text}'` : `Completed: '${task.text}'`;
@@ -1222,7 +1300,6 @@
     function clearAll() {
       if (confirm('Clear all tasks?')) {
         tasks = [];
-        editingTaskId = null;
         saveAndRender("Clear all tasks");
         showToast("Cleared all tasks");
       }
@@ -1242,7 +1319,6 @@
 
     function exportTasks() {
       if (typeof gtag === 'function') gtag('event', 'backup_used');
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       if (tasks.length === 0 && wards.length <= 1) {
         alert("No tasks or wards available to backup.");
         return;
@@ -1270,7 +1346,6 @@
             if (imported.wards) wards = imported.wards;
           }
           selectedWard = 'All';
-          editingTaskId = null;
           saveAndRender("Restore backup", false, true);
           alert("Backup restored!");
         } catch (err) {
@@ -1329,24 +1404,8 @@
       }
 
       listContainer.innerHTML = sortedTasks.map(task => {
-        const isEditing = (editingTaskId === task.id);
-        if (isEditing) {
-          return `
-            <div class="task-item" data-id="${task.id}">
-              <div class="inline-edit-container">
-                <input type="text" id="edit-input-${task.id}" class="inline-edit-input" value="${escapeHtml(task.text)}" enterkeyhint="done" onkeydown="if(event.key==='Enter') commitInlineEdit(${task.id})" onblur="handleEditBlur(${task.id})">
-                <div class="inline-urgency-selector">
-                  <span class="urgency-label">Urgency:</span>
-                  <button type="button" class="urgency-opt-btn opt-high ${task.priority === 'high' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'high', event)" onclick="changeUrgencyDirect(${task.id}, 'high', event)">High</button>
-                  <button type="button" class="urgency-opt-btn opt-mid ${task.priority === 'mid' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'mid', event)" onclick="changeUrgencyDirect(${task.id}, 'mid', event)">Mid</button>
-                  <button type="button" class="urgency-opt-btn opt-low ${task.priority === 'low' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'low', event)" onclick="changeUrgencyDirect(${task.id}, 'low', event)">Low</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }
 
-        // Only show tick SVG when task is completed
+        // SVG tick to bypass Safari's aggressive emoji styler
         const tickSvg = task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
 
         return `
@@ -1358,7 +1417,7 @@
                     <span class="badge badge-${task.priority}">${task.priority}</span>
                     ${task.ward ? `<span class="badge badge-ward" style="${task.ward !== 'All' ? 'background-color:'+getWardColor(task.ward)+'; border: none;' : ''}" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
                     <span class="task-time">${formatDate(task.createdAt)}</span>
-                    ${task.completed && task.completedAt ? `<span class="task-time">(Fin: ${formatDate(task.completedAt)})</span>` : ''}
+                    ${task.completed && task.completedAt ? `<span class="task-time" style="color: var(--success); font-weight: 600;">(Fin: ${formatDate(task.completedAt)})</span>` : ''}
                   </div>
                   <span class="task-text">${escapeHtml(task.text)}</span>
                 </div>
@@ -1398,7 +1457,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = ''; // Fix completed task transparency bug
+            node.style.opacity = '';
             node.style.transform = 'translateY(0)';
           });
         }
