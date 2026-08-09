@@ -364,7 +364,6 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    /* FIX: White tick on green background */
     .task-item.completed .action-btn {
       background-color: #52c41a !important;
       border-color: #52c41a !important;
@@ -849,9 +848,9 @@
           if (editInput) {
              const rect = editInput.getBoundingClientRect();
              const viewHeight = window.visualViewport.height;
-             // If input is trapped under the keyboard (lower half), nudge it up
-             if (rect.top > viewHeight / 2) {
-                 window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'smooth' });
+             // If input is trapped under the keyboard (lower half) or above screen
+             if (rect.top > viewHeight / 2 || rect.bottom < 0) {
+                 window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'auto' });
              }
           }
         }
@@ -968,9 +967,8 @@
 
       input.value = '';
       
-      const shortText = text.length > 15 ? text.substring(0, 15) + '...' : text;
-      saveAndRender(`Add task: '${shortText}'`);
-      showToast(`Added task: '${shortText}'`);
+      saveAndRender(`Add task: '${text}'`);
+      showToast(`Added task: '${text}'`);
       
       setTimeout(() => input.focus(), 10);
     }
@@ -988,21 +986,22 @@
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         
+        // Use instant auto-scroll behavior for much faster mobile keyboard reaction
         setTimeout(() => {
           const editInputRef = document.getElementById(`edit-input-${id}`);
           if (editInputRef) {
-            editInputRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            editInputRef.scrollIntoView({ behavior: 'auto', block: 'center' });
             
             // Secondary fallback if visualViewport resize takes a long time
             setTimeout(() => {
                 const rect = editInputRef.getBoundingClientRect();
                 const viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                if (rect.top > viewHeight / 2) {
-                    window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'smooth' });
+                if (rect.top > viewHeight / 2 || rect.bottom < 0) {
+                    window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'auto' });
                 }
-            }, 400);
+            }, 100);
           }
-        }, 150);
+        }, 50);
       }
     }
 
@@ -1050,9 +1049,9 @@
       const task = tasks.find(t => t.id === id);
       tasks = tasks.filter(t => t.id !== id);
       if (editingTaskId === id) editingTaskId = null;
-      const shortText = task && task.text.length > 15 ? task.text.substring(0, 15) + '...' : (task ? task.text : 'task');
-      saveAndRender(`Delete task: '${shortText}'`);
-      showToast(`Deleted task`);
+      const fullText = task ? task.text : 'task';
+      saveAndRender(`Delete task: '${fullText}'`);
+      showToast(`Deleted task: '${fullText}'`);
     }
 
     function openTaskWardModal(taskId) {
@@ -1193,7 +1192,14 @@
       if (sf) sf.classList.toggle('active', mode === 'finish');
       
       renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
-      showToast(`Sorted by ${mode} (${sortDirection[mode] > 0 ? 'Descending' : 'Ascending'})`);
+      
+      let sortMsg = '';
+      if (mode === 'time' || mode === 'finish') {
+          sortMsg = sortDirection[mode] > 0 ? 'from Newest to Oldest' : 'from Oldest to Newest';
+      } else {
+          sortMsg = sortDirection[mode] > 0 ? 'from Highest Urgency to Lowest' : 'from Lowest Urgency to Highest';
+      }
+      showToast(`Sorted by ${mode} (${sortMsg})`);
     }
 
     function formatDate(timestamp) {
@@ -1202,7 +1208,8 @@
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${day}/${month} ${hours}:${minutes}`;
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${day}/${month} ${hours}:${minutes}:${seconds}`;
     }
 
     function toggleTask(id) {
@@ -1210,8 +1217,7 @@
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       tasks = tasks.map(task => {
         if (task.id === id) {
-          const shortText = task.text.length > 15 ? task.text.substring(0, 15) + '...' : task.text;
-          actionType = task.completed ? `Uncompleted: '${shortText}'` : `Completed: '${shortText}'`;
+          actionType = task.completed ? `Uncompleted: '${task.text}'` : `Completed: '${task.text}'`;
           if (typeof gtag === 'function') gtag('event', 'task_toggled', { 'is_completed': !task.completed });
           return { ...task, completed: !task.completed, completedAt: !task.completed ? Date.now() : null };
         }
@@ -1350,7 +1356,7 @@
 
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">&#10004;</button>
+              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">${task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</button>
               <div class="task-left">
                 <div class="task-details">
                   <div class="badges">
