@@ -171,7 +171,6 @@
     .toggle-btn.active {
       background: var(--card-bg);
       color: var(--text);
-      color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
@@ -245,7 +244,6 @@
       -webkit-overflow-scrolling: touch;
       padding-top: calc(130px + env(safe-area-inset-top, 0px)); 
       padding-bottom: calc(45vh + env(safe-area-inset-bottom, 0px));
-      /* Disable smooth scrolling on the main container as we're not jumping anymore */
       scroll-behavior: auto;
     }
 
@@ -264,7 +262,7 @@
       flex-direction: column;
       gap: 6px;
       position: relative;
-      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
+      min-height: calc(100% + 1px);
     }
 
     .task-item {
@@ -370,7 +368,6 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    /* SVG Tick logic */
     .task-item.completed .action-btn {
       background-color: #52c41a !important;
       border-color: #52c41a !important;
@@ -398,14 +395,15 @@
       border-radius: 4px;
     }
 
-    /* Fixed Edit Modal Overlay */
+    /* Fixed Edit Modal Overlay - Top Mounted for Keyboard Compatibility */
     .edit-overlay-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.6);
       display: flex;
       justify-content: center;
-      align-items: flex-end; /* Align to bottom for keyboard ease */
+      align-items: flex-start; /* IMPORTANT: Align to top so it's never blocked by keyboard */
+      padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
       z-index: 3000;
       animation: fadeIn 0.2s ease;
     }
@@ -417,20 +415,20 @@
 
     .edit-overlay-content {
       background: var(--card-bg);
-      width: 100%;
-      padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
-      border-radius: 16px 16px 0 0;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 500px;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      /* Animation to slide up */
-      animation: slideUpEdit 0.2s ease-out;
+      animation: slideDownEdit 0.2s ease-out;
     }
 
-    @keyframes slideUpEdit {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+    @keyframes slideDownEdit {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
 
     .edit-overlay-header {
@@ -550,15 +548,6 @@
     .add-btn.low { color: var(--low); }
 
     /* Modals */
-    .modal-backdrop {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-    }
     .modal-content {
       background: var(--card-bg);
       color: var(--text);
@@ -817,8 +806,7 @@
     let tasks = JSON.parse(localStorage.getItem('qt_tasks')) || [];
     let wards = JSON.parse(localStorage.getItem('qt_wards')) || ['All'];
     let selectedWard = 'All';
-    
-    // We no longer use inline editing, we use the overlay
+    let editingTaskId = null;
     let activeEditingTaskIdForWard = null;
     let mobileEditActiveId = null;
     let mobileEditTempPriority = 'mid';
@@ -1061,7 +1049,7 @@
       setTimeout(() => input.focus(), 10);
     }
 
-    // --- NEW MODAL EDIT SYSTEM (Fixes the jumping bug) ---
+    // --- NEW MODAL EDIT SYSTEM (Fixes keyboard blocking) ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
       const task = tasks.find(t => t.id === id);
