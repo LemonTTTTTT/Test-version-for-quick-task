@@ -364,6 +364,7 @@
       justify-content: center;
       flex-shrink: 0;
     }
+    /* FIX: White tick on green background */
     .task-item.completed .action-btn {
       background-color: #52c41a !important;
       border-color: #52c41a !important;
@@ -627,6 +628,7 @@
       <div class="toggle-group">
         <button class="toggle-btn active" id="sort-time" onclick="setSort('time')">By time</button>
         <button class="toggle-btn" id="sort-urgency" onclick="setSort('urgency')">By urgency</button>
+        <button class="toggle-btn" id="sort-finish" onclick="setSort('finish')">By finish</button>
       </div>
       <button class="clear-btn" onclick="clearAll()">Clear all</button>
     </div>
@@ -719,6 +721,7 @@
     let activeEditingTaskIdForWard = null;
     
     let currentSort = 'time';
+    let sortDirection = { 'time': 1, 'urgency': 1, 'finish': 1 };
     const urgencyMap = { 'high': 1, 'mid': 2, 'low': 3 };
 
     // --- Undo / Redo System ---
@@ -788,12 +791,14 @@
       }
     }
 
+    let toastTimeout;
     function showToast(message) {
       const toast = document.getElementById('toast-container');
       if (!toast) return;
       toast.innerText = message;
       toast.style.opacity = '1';
-      setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
 
     // Dynamic color generator for Wards
@@ -842,7 +847,12 @@
         if (editingTaskId !== null) {
           const editInput = document.getElementById(`edit-input-${editingTaskId}`);
           if (editInput) {
-             editInput.scrollIntoView({ behavior: 'auto', block: 'center' });
+             const rect = editInput.getBoundingClientRect();
+             const viewHeight = window.visualViewport.height;
+             // If input is trapped under the keyboard (lower half), nudge it up
+             if (rect.top > viewHeight / 2) {
+                 window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'smooth' });
+             }
           }
         }
         
@@ -957,7 +967,10 @@
       });
 
       input.value = '';
-      saveAndRender("Add task");
+      
+      const shortText = text.length > 15 ? text.substring(0, 15) + '...' : text;
+      saveAndRender(`Add task: '${shortText}'`);
+      showToast(`Added task: '${shortText}'`);
       
       setTimeout(() => input.focus(), 10);
     }
@@ -975,13 +988,21 @@
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         
-        // Wait long enough for mobile keyboards to slide up if visualViewport isn't completely perfect
         setTimeout(() => {
           const editInputRef = document.getElementById(`edit-input-${id}`);
           if (editInputRef) {
             editInputRef.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Secondary fallback if visualViewport resize takes a long time
+            setTimeout(() => {
+                const rect = editInputRef.getBoundingClientRect();
+                const viewHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                if (rect.top > viewHeight / 2) {
+                    window.scrollBy({ top: rect.top - (viewHeight / 3), behavior: 'smooth' });
+                }
+            }, 400);
           }
-        }, 300);
+        }, 150);
       }
     }
 
@@ -1012,17 +1033,26 @@
         const text = input.value.trim();
         if (text) {
           const task = tasks.find(t => t.id === id);
-          if (task) task.text = text;
+          if (task && task.text !== text) {
+            task.text = text;
+            editingTaskId = null;
+            saveAndRender(`Edited task`);
+            showToast(`Saved edits`);
+            return;
+          }
         }
       }
       editingTaskId = null;
-      saveAndRender("Edit task");
+      saveAndRender("Edit task", true, true); // No change, skip history
     }
 
     function deleteTask(id) {
+      const task = tasks.find(t => t.id === id);
       tasks = tasks.filter(t => t.id !== id);
       if (editingTaskId === id) editingTaskId = null;
-      saveAndRender("Delete task");
+      const shortText = task && task.text.length > 15 ? task.text.substring(0, 15) + '...' : (task ? task.text : 'task');
+      saveAndRender(`Delete task: '${shortText}'`);
+      showToast(`Deleted task`);
     }
 
     function openTaskWardModal(taskId) {
@@ -1060,7 +1090,8 @@
         const task = tasks.find(t => t.id === activeEditingTaskIdForWard);
         if (task) {
           task.ward = wardName;
-          saveAndRender("Change task ward");
+          saveAndRender(`Moved task to ${wardName || 'All'}`);
+          showToast(`Moved task to ${wardName || 'All'}`);
         }
       }
       closeTaskWardModal();
@@ -1107,7 +1138,8 @@
       if (!wards.includes(val)) {
         wards.push(val);
         input.value = '';
-        saveAndRender("Add ward");
+        saveAndRender(`Add ward: ${val}`);
+        showToast(`Added ward: ${val}`);
         renderWardModalList();
       }
     }
@@ -1118,7 +1150,7 @@
       const temp = wards[index];
       wards[index] = wards[targetIndex];
       wards[targetIndex] = temp;
-      saveAndRender("Reorder ward");
+      saveAndRender("Reorder wards");
       renderWardModalList();
     }
 
@@ -1130,7 +1162,8 @@
         tasks.forEach(t => { if (t.ward === current) t.ward = newName; });
         if (selectedWard === current) selectedWard = newName;
         wards[index] = newName;
-        saveAndRender("Rename ward");
+        saveAndRender(`Rename ward to ${newName}`);
+        showToast(`Renamed ward to ${newName}`);
         renderWardModalList();
       }
     }
@@ -1140,17 +1173,27 @@
       if (confirm(`Delete ward "${target}"?`)) {
         wards.splice(index, 1);
         if (selectedWard === target) selectedWard = 'All';
-        saveAndRender("Delete ward");
+        saveAndRender(`Delete ward: ${target}`);
+        showToast(`Deleted ward: ${target}`);
         renderWardModalList();
       }
     }
 
     function setSort(mode) {
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
+      
+      if (currentSort === mode) {
+        sortDirection[mode] *= -1; // Reverse direction
+      }
       currentSort = mode;
+      
       document.getElementById('sort-time').classList.toggle('active', mode === 'time');
       document.getElementById('sort-urgency').classList.toggle('active', mode === 'urgency');
+      const sf = document.getElementById('sort-finish');
+      if (sf) sf.classList.toggle('active', mode === 'finish');
+      
       renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
+      showToast(`Sorted by ${mode} (${sortDirection[mode] > 0 ? 'Descending' : 'Ascending'})`);
     }
 
     function formatDate(timestamp) {
@@ -1167,13 +1210,15 @@
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       tasks = tasks.map(task => {
         if (task.id === id) {
-          actionType = task.completed ? "Uncomplete task" : "Complete task";
+          const shortText = task.text.length > 15 ? task.text.substring(0, 15) + '...' : task.text;
+          actionType = task.completed ? `Uncompleted: '${shortText}'` : `Completed: '${shortText}'`;
           if (typeof gtag === 'function') gtag('event', 'task_toggled', { 'is_completed': !task.completed });
           return { ...task, completed: !task.completed, completedAt: !task.completed ? Date.now() : null };
         }
         return task;
       });
       saveAndRender(actionType);
+      showToast(actionType);
     }
 
     function clearAll() {
@@ -1181,6 +1226,7 @@
         tasks = [];
         editingTaskId = null;
         saveAndRender("Clear all tasks");
+        showToast("Cleared all tasks");
       }
     }
 
@@ -1240,18 +1286,27 @@
 
     function getSortedTasks() {
       let filtered = (selectedWard === 'All') ? tasks : tasks.filter(t => t.ward === selectedWard);
-      const sortTasks = (list) => {
+      
+      const sortTasks = (list, isCompletedList = false) => {
         return [...list].sort((a, b) => {
+          const dir = sortDirection[currentSort];
+          
           if (currentSort === 'urgency') {
              if (urgencyMap[a.priority] !== urgencyMap[b.priority]) {
-               return urgencyMap[a.priority] - urgencyMap[b.priority];
+               return (urgencyMap[a.priority] - urgencyMap[b.priority]) * dir;
              }
-             return b.createdAt - a.createdAt;
+             return (b.createdAt - a.createdAt) * dir;
+          } else if (currentSort === 'finish' && isCompletedList) {
+             const aTime = a.completedAt || a.createdAt;
+             const bTime = b.completedAt || b.createdAt;
+             return (bTime - aTime) * dir;
           }
-          return b.createdAt - a.createdAt;
+          
+          return (b.createdAt - a.createdAt) * dir;
         });
       };
-      return [...sortTasks(filtered.filter(t => !t.completed)), ...sortTasks(filtered.filter(t => t.completed))];
+      
+      return [...sortTasks(filtered.filter(t => !t.completed), false), ...sortTasks(filtered.filter(t => t.completed), true)];
     }
 
     function renderWithAnimation(skipAnimation = false) {
