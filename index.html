@@ -171,24 +171,9 @@
     .toggle-btn.active {
       background: var(--card-bg);
       color: var(--text);
-      color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
-    .backup-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .action-link {
-      border: none;
-      background: none;
-      color: var(--primary);
-      font-size: 0.75rem;
-      cursor: pointer;
-      text-decoration: none;
-      font-weight: 500;
-    }
     .clear-btn {
       border: none;
       background: none;
@@ -600,6 +585,24 @@
       color: var(--text);
       margin-bottom: 2px;
     }
+
+    /* Toast Notification Styles */
+    #toast-container {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -610,8 +613,8 @@
     <header>
       <h1>Quick Tasks</h1>
       <div class="header-actions">
-        <button class="info-btn" id="undo-btn" onclick="undoAction()" disabled style="opacity: 0.3;" title="Undo">Undo</button>
-        <button class="info-btn" id="redo-btn" onclick="redoAction()" disabled style="opacity: 0.3;" title="Redo">Redo</button>
+        <button class="info-btn" id="undo-btn" onclick="undoAction()" disabled style="opacity: 0.3; font-size: 0.8rem;" title="Undo">Undo</button>
+        <button class="info-btn" id="redo-btn" onclick="redoAction()" disabled style="opacity: 0.3; font-size: 0.8rem;" title="Redo">Redo</button>
         <button class="info-btn" onclick="toggleTheme()" id="theme-btn">☀️</button>
         <button class="info-btn" onclick="openAboutModal()">Main Settings</button>
       </div>
@@ -650,6 +653,9 @@
   </footer>
 
 </div>
+
+<!-- Toast Notification -->
+<div id="toast-container"></div>
 
 <!-- Disclaimer & Acknowledgments Modal -->
 <div id="about-modal" class="modal-backdrop" style="display: none;">
@@ -716,11 +722,12 @@
     let historyStack = [];
     let historyIndex = -1;
 
-    function saveStateToHistory(isInitial = false) {
+    function saveStateToHistory(actionName, isInitial = false) {
       if (!isInitial && historyIndex < historyStack.length - 1) {
         historyStack = historyStack.slice(0, historyIndex + 1);
       }
       historyStack.push({
+        actionName: actionName || "Action",
         tasks: JSON.parse(JSON.stringify(tasks)),
         wards: JSON.parse(JSON.stringify(wards)),
         selectedWard: selectedWard
@@ -735,15 +742,19 @@
 
     function undoAction() {
       if (historyIndex > 0) {
+        const actionUndone = historyStack[historyIndex].actionName;
         historyIndex--;
         restoreStateFromHistory();
+        showToast(`Undo: ${actionUndone}`);
       }
     }
 
     function redoAction() {
       if (historyIndex < historyStack.length - 1) {
         historyIndex++;
+        const actionRedone = historyStack[historyIndex].actionName;
         restoreStateFromHistory();
+        showToast(`Redo: ${actionRedone}`);
       }
     }
 
@@ -774,9 +785,17 @@
       }
     }
 
+    function showToast(message) {
+      const toast = document.getElementById('toast-container');
+      if (!toast) return;
+      toast.innerText = message;
+      toast.style.opacity = '1';
+      setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+    }
+
     // Dynamic color generator for Wards
     function getWardColor(wardName) {
-      if (!wardName || wardName === 'All') return '#722ed1';
+      if (!wardName || wardName === 'All') return ''; // Empty string so it falls back to CSS logic if needed
       let hash = 0;
       for (let i = 0; i < wardName.length; i++) {
         hash = wardName.charCodeAt(i) + ((hash << 5) - hash);
@@ -860,12 +879,12 @@
       document.getElementById('about-modal').style.display = 'none';
     }
 
-    function saveAndRender(skipHistory = false, skipAnimation = false) {
+    function saveAndRender(actionName = "Action", skipHistory = false, skipAnimation = false) {
       localStorage.setItem('qt_tasks', JSON.stringify(tasks));
       localStorage.setItem('qt_wards', JSON.stringify(wards));
       
       if (!skipHistory) {
-        saveStateToHistory();
+        saveStateToHistory(actionName);
       }
       
       renderWards();
@@ -896,9 +915,9 @@
       selectedWard = ward;
       const trackedWard = (ward === 'All' || ward === 'Ward') ? ward : 'custom_ward';
       if (typeof gtag === 'function') gtag('event', 'ward_switched', { 'ward_type': trackedWard });
-      saveAndRender();
       
-      // Keep focus on input if we are rapidly adding tasks
+      saveAndRender("Switch ward", true, true); // Don't push to undo history just for switching tabs
+      
       const input = document.getElementById('task-input');
       if (document.activeElement === input && input.value.length === 0) {
         setTimeout(() => input.focus(), 10);
@@ -926,7 +945,7 @@
       });
 
       input.value = '';
-      saveAndRender();
+      saveAndRender("Add task");
       
       setTimeout(() => input.focus(), 10);
     }
@@ -943,9 +962,10 @@
         preventSafariInputScroll(input);
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
+        // Reduced delay and instant scroll behavior to fix slow phone auto-scroll
         setTimeout(() => {
-          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 400);
+          input.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }, 50);
       }
     }
 
@@ -980,13 +1000,13 @@
         }
       }
       editingTaskId = null;
-      saveAndRender();
+      saveAndRender("Edit task");
     }
 
     function deleteTask(id) {
       tasks = tasks.filter(t => t.id !== id);
       if (editingTaskId === id) editingTaskId = null;
-      saveAndRender();
+      saveAndRender("Delete task");
     }
 
     function openTaskWardModal(taskId) {
@@ -1024,7 +1044,7 @@
         const task = tasks.find(t => t.id === activeEditingTaskIdForWard);
         if (task) {
           task.ward = wardName;
-          saveAndRender();
+          saveAndRender("Change task ward");
         }
       }
       closeTaskWardModal();
@@ -1071,7 +1091,7 @@
       if (!wards.includes(val)) {
         wards.push(val);
         input.value = '';
-        saveAndRender();
+        saveAndRender("Add ward");
         renderWardModalList();
       }
     }
@@ -1082,7 +1102,7 @@
       const temp = wards[index];
       wards[index] = wards[targetIndex];
       wards[targetIndex] = temp;
-      saveAndRender();
+      saveAndRender("Reorder ward");
       renderWardModalList();
     }
 
@@ -1094,7 +1114,7 @@
         tasks.forEach(t => { if (t.ward === current) t.ward = newName; });
         if (selectedWard === current) selectedWard = newName;
         wards[index] = newName;
-        saveAndRender();
+        saveAndRender("Rename ward");
         renderWardModalList();
       }
     }
@@ -1104,7 +1124,7 @@
       if (confirm(`Delete ward "${target}"?`)) {
         wards.splice(index, 1);
         if (selectedWard === target) selectedWard = 'All';
-        saveAndRender();
+        saveAndRender("Delete ward");
         renderWardModalList();
       }
     }
@@ -1114,7 +1134,7 @@
       currentSort = mode;
       document.getElementById('sort-time').classList.toggle('active', mode === 'time');
       document.getElementById('sort-urgency').classList.toggle('active', mode === 'urgency');
-      renderWithAnimation();
+      renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
     }
 
     function formatDate(timestamp) {
@@ -1127,22 +1147,24 @@
     }
 
     function toggleTask(id) {
+      let actionType = "Toggle task";
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       tasks = tasks.map(task => {
         if (task.id === id) {
+          actionType = task.completed ? "Uncomplete task" : "Complete task";
           if (typeof gtag === 'function') gtag('event', 'task_toggled', { 'is_completed': !task.completed });
           return { ...task, completed: !task.completed, completedAt: !task.completed ? Date.now() : null };
         }
         return task;
       });
-      saveAndRender();
+      saveAndRender(actionType);
     }
 
     function clearAll() {
       if (confirm('Clear all tasks?')) {
         tasks = [];
         editingTaskId = null;
-        saveAndRender();
+        saveAndRender("Clear all tasks");
       }
     }
 
@@ -1152,7 +1174,7 @@
         localStorage.removeItem('qt_wards');
         tasks = [];
         wards = ['All'];
-        saveAndRender(false, true); // true = skip animation
+        saveAndRender("Factory reset", false, true);
         closeAboutModal();
         alert("All data has been wiped. App is now in its initial state.");
       }
@@ -1189,7 +1211,7 @@
           }
           selectedWard = 'All';
           editingTaskId = null;
-          saveAndRender(false, true);
+          saveAndRender("Restore backup", false, true);
           alert("Backup restored!");
         } catch (err) {
           alert("Error reading backup file.");
@@ -1257,12 +1279,12 @@
 
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete"></button>
+              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">✔</button>
               <div class="task-left">
                 <div class="task-details">
                   <div class="badges">
                     <span class="badge badge-${task.priority}">${task.priority}</span>
-                    ${task.ward ? `<span class="badge badge-ward" style="background-color: ${getWardColor(task.ward)};" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
+                    ${task.ward ? `<span class="badge badge-ward" style="${task.ward !== 'All' ? 'background-color:'+getWardColor(task.ward)+';' : ''}" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
                     <span class="task-time">${formatDate(task.createdAt)}</span>
                     ${task.completed && task.completedAt ? `<span class="task-time">(Fin: ${formatDate(task.completedAt)})</span>` : ''}
                   </div>
@@ -1277,7 +1299,6 @@
           `;
         }).join('');
 
-      // PERFORMANCE FIX: Bypass DOM loop and animation entirely if skipping
       if (skipAnimation) return;
 
       const newTaskNodes = listContainer.querySelectorAll('.task-item');
@@ -1291,7 +1312,7 @@
             node.style.transition = 'none';
             node.style.transform = `translateY(${deltaY}px)`;
             node.style.zIndex = '100';
-            node.getBoundingClientRect(); // reflow
+            node.getBoundingClientRect(); 
             requestAnimationFrame(() => {
               node.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
               node.style.transform = `translateY(0)`;
@@ -1305,7 +1326,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = ''; // FIX: Reset to empty so CSS class handles completed task transparency
+            node.style.opacity = ''; // Fix completed task transparency bug
             node.style.transform = 'translateY(0)';
           });
         }
@@ -1316,10 +1337,10 @@
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    saveStateToHistory(true);
+    saveStateToHistory("Initial Load", true);
     historyIndex = 0;
     updateUndoRedoUI();
-    saveAndRender(true, true); // Initial render
+    saveAndRender("Initial Load", true, true); 
 </script>
 </body>
 </html>
