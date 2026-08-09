@@ -279,7 +279,6 @@
       min-height: calc(100% + 1px); /* Force iOS scroll bounce */
     }
 
-    /* Used for animations */
     .task-item {
       transition: transform 0.3s ease, opacity 0.3s ease;
       background: var(--card-bg);
@@ -584,7 +583,6 @@
       -webkit-appearance: none;
     }
 
-    /* About Disclaimer Modal Styles */
     .about-body {
       font-size: 0.85rem;
       color: #444;
@@ -612,8 +610,8 @@
     <header>
       <h1>Quick Tasks</h1>
       <div class="header-actions">
-        <button class="info-btn" id="undo-btn" onclick="undoAction()" disabled style="opacity: 0.3; font-size: 1rem;" title="Undo">↩️</button>
-        <button class="info-btn" id="redo-btn" onclick="redoAction()" disabled style="opacity: 0.3; font-size: 1rem;" title="Redo">↪️</button>
+        <button class="info-btn" id="undo-btn" onclick="undoAction()" disabled style="opacity: 0.3;" title="Undo">Undo</button>
+        <button class="info-btn" id="redo-btn" onclick="redoAction()" disabled style="opacity: 0.3;" title="Redo">Redo</button>
         <button class="info-btn" onclick="toggleTheme()" id="theme-btn">☀️</button>
         <button class="info-btn" onclick="openAboutModal()">Main Settings</button>
       </div>
@@ -844,8 +842,6 @@
       setTimeout(handleViewportResize, 100);
       preventSafariInputScroll(document.getElementById('task-input'));
     });
-
-    // Swipe gestures removed as requested
     
     document.addEventListener('click', function(e) {
       if (editingTaskId === null) return;
@@ -932,7 +928,6 @@
       input.value = '';
       saveAndRender();
       
-      // Keep keyboard open for continuous entry
       setTimeout(() => input.focus(), 10);
     }
 
@@ -948,7 +943,6 @@
         preventSafariInputScroll(input);
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
-        // Use timeout only for scrolling so focus happens synchronously in the event handler
         setTimeout(() => {
           input.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 400);
@@ -970,7 +964,6 @@
 
     function handleEditBlur(id) {
       setTimeout(() => {
-        // If we are still editing this task and focus has completely left the input and not gone to an urgency button
         if (editingTaskId === id) {
           commitInlineEdit(id);
         }
@@ -1196,7 +1189,7 @@
           }
           selectedWard = 'All';
           editingTaskId = null;
-          saveAndRender(false, true); // skip animation on import
+          saveAndRender(false, true);
           alert("Backup restored!");
         } catch (err) {
           alert("Error reading backup file.");
@@ -1264,14 +1257,14 @@
 
         return `
             <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
-              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete">✔</button>
+              <button class="action-btn" onclick="toggleTask(${task.id})" title="Toggle Complete"></button>
               <div class="task-left">
                 <div class="task-details">
                   <div class="badges">
                     <span class="badge badge-${task.priority}">${task.priority}</span>
-                    ${task.ward ? `<span class="badge badge-ward" style="background-color: ${getWardColor(task.ward)}; border: none;" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
+                    ${task.ward ? `<span class="badge badge-ward" style="background-color: ${getWardColor(task.ward)};" onclick="openTaskWardModal(${task.id})">${escapeHtml(task.ward)}</span>` : `<span class="badge badge-no-ward" onclick="openTaskWardModal(${task.id})">+ Ward</span>`}
                     <span class="task-time">${formatDate(task.createdAt)}</span>
-                    ${task.completed && task.completedAt ? `<span class="task-time" style="color: var(--success); font-weight: 600;">✓ Fin: ${formatDate(task.completedAt)}</span>` : ''}
+                    ${task.completed && task.completedAt ? `<span class="task-time">(Fin: ${formatDate(task.completedAt)})</span>` : ''}
                   </div>
                   <span class="task-text">${escapeHtml(task.text)}</span>
                 </div>
@@ -1284,6 +1277,9 @@
           `;
         }).join('');
 
+      // PERFORMANCE FIX: Bypass DOM loop and animation entirely if skipping
+      if (skipAnimation) return;
+
       const newTaskNodes = listContainer.querySelectorAll('.task-item');
       newTaskNodes.forEach(node => {
         const id = node.getAttribute('data-id');
@@ -1291,7 +1287,7 @@
         if (first) {
           const last = node.getBoundingClientRect();
           const deltaY = first.top - last.top;
-          if (deltaY !== 0 && !skipAnimation) {
+          if (deltaY !== 0) {
             node.style.transition = 'none';
             node.style.transform = `translateY(${deltaY}px)`;
             node.style.zIndex = '100';
@@ -1309,7 +1305,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = '1';
+            node.style.opacity = ''; // FIX: Reset to empty so CSS class handles completed task transparency
             node.style.transform = 'translateY(0)';
           });
         }
