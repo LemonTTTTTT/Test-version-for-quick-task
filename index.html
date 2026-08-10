@@ -129,18 +129,6 @@
     }
     [data-theme="dark"] .info-btn { color: #ccc; }
 
-    .backup-alert {
-      background-color: #fff2f0;
-      border-bottom: 1px solid #ffccc7;
-      color: #ff4d4f;
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
     .controls {
       display: flex;
       justify-content: space-between;
@@ -170,7 +158,6 @@
     }
     .toggle-btn.active {
       background: var(--card-bg);
-      color: var(--text);
       color: var(--text);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
@@ -398,21 +385,62 @@
       border-radius: 4px;
     }
 
-    .inline-edit-container {
+    /* Fixed Edit Modal Overlay - Top Mounted for Keyboard Compatibility */
+    .edit-overlay-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+      z-index: 5000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .edit-overlay-content {
+      background: var(--card-bg);
+      width: 95%;
+      max-width: 500px;
+      padding: 16px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      width: 100%;
+      gap: 12px;
+      animation: slideDownEdit 0.2s ease-out;
     }
-    .inline-edit-input {
+
+    @keyframes slideDownEdit {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .edit-overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .edit-overlay-input {
       width: 100%;
-      padding: 8px 10px;
+      padding: 12px;
       border: 1px solid var(--primary);
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 16px; 
+      background: var(--input-bg);
+      color: var(--text);
       outline: none;
       -webkit-appearance: none;
     }
+
     .inline-urgency-selector {
       display: flex;
       gap: 6px;
@@ -425,19 +453,48 @@
     }
     .urgency-opt-btn {
       flex: 1;
-      padding: 6px;
+      padding: 8px;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
       font-weight: 600;
       background: var(--btn-bg);
       color: var(--ward-chip-text);
       cursor: pointer;
       text-transform: uppercase;
+      transition: all 0.2s;
     }
     .urgency-opt-btn.opt-high.selected { background: var(--high); color: white; border-color: var(--high); }
     .urgency-opt-btn.opt-mid.selected { background: var(--mid); color: white; border-color: var(--mid); }
     .urgency-opt-btn.opt-low.selected { background: var(--low); color: white; border-color: var(--low); }
+    
+    .edit-overlay-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .edit-save-btn {
+      flex: 2;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .edit-cancel-btn {
+      flex: 1;
+      background: var(--btn-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
 
     footer {
       position: absolute;
@@ -672,6 +729,27 @@
 
 </div>
 
+<!-- Mobile Edit Overlay -->
+<div id="mobile-edit-overlay" class="edit-overlay-backdrop" style="display: none;" onclick="closeMobileEdit(event)">
+  <div class="edit-overlay-content" onclick="event.stopPropagation()">
+    <div class="edit-overlay-header">
+      <span>Edit Task</span>
+      <button class="close-modal-btn" onclick="closeMobileEdit()">&times;</button>
+    </div>
+    <input type="text" id="mobile-edit-input" class="edit-overlay-input" placeholder="Task text..." onkeydown="if(event.key==='Enter') saveMobileEdit()">
+    <div class="inline-urgency-selector">
+      <span class="urgency-label">Urgency:</span>
+      <button type="button" id="mobile-edit-high" class="urgency-opt-btn opt-high" onclick="setMobileEditUrgency('high')">High</button>
+      <button type="button" id="mobile-edit-mid" class="urgency-opt-btn opt-mid" onclick="setMobileEditUrgency('mid')">Mid</button>
+      <button type="button" id="mobile-edit-low" class="urgency-opt-btn opt-low" onclick="setMobileEditUrgency('low')">Low</button>
+    </div>
+    <div class="edit-overlay-actions">
+      <button class="edit-cancel-btn" onclick="closeMobileEdit()">Cancel</button>
+      <button class="edit-save-btn" onclick="saveMobileEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Notification -->
 <div id="toast-container"></div>
 
@@ -787,8 +865,10 @@
     let tasks = JSON.parse(localStorage.getItem('qt_tasks')) || [];
     let wards = JSON.parse(localStorage.getItem('qt_wards')) || ['All'];
     let selectedWard = 'All';
-    let editingTaskId = null; 
+    let editingTaskId = null; // No longer used, kept to prevent stray errors
     let activeEditingTaskIdForWard = null;
+    let mobileEditActiveId = null;
+    let mobileEditTempPriority = 'mid';
     
     let currentSort = 'time';
     let sortDirection = { 'time': 1, 'urgency': 1, 'finish': 1 };
@@ -890,6 +970,20 @@
       return distinctWardColors[index];
     }
 
+    function preventSafariInputScroll(el) {
+      if (!el) return;
+      el.addEventListener('focus', (e) => {
+        // Only trigger the fix if we are strictly using the bottom bar
+        if(el.id === 'task-input') {
+            el.style.transform = 'translateY(-2000px)';
+            requestAnimationFrame(() => {
+              el.style.transform = '';
+              window.scrollTo(0, 0);
+            });
+        }
+      });
+    }
+
     let appContainer, footerElem, topFixedElem, mainContentElem;
     let viewportUpdatePending = false;
 
@@ -909,20 +1003,6 @@
         mainContentElem.style.paddingTop = (topFixedElem.offsetHeight + 8) + 'px';
         mainContentElem.style.paddingBottom = (footerElem.offsetHeight + 8) + 'px';
         window.scrollTo(0, 0);
-        
-        // Ensure the editing task stays visible without scrolling the whole page (which jumps the header)
-        if (editingTaskId !== null) {
-          const editInput = document.getElementById(`edit-input-${editingTaskId}`);
-          if (editInput) {
-             const rect = editInput.getBoundingClientRect();
-             const mainRect = mainContentElem.getBoundingClientRect();
-             if (rect.bottom > mainRect.bottom || rect.top < mainRect.top) {
-                 const offsetTop = rect.top - mainRect.top + mainContentElem.scrollTop;
-                 mainContentElem.scrollTo({ top: offsetTop - (mainRect.height / 3), behavior: 'auto' });
-             }
-          }
-        }
-        
         viewportUpdatePending = false;
       });
     }
@@ -949,18 +1029,10 @@
       }
       setTimeout(handleViewportResize, 100);
       setTimeout(handleViewportResize, 500); // Fallback to calculate header height exactly
-    });
-    
-    document.addEventListener('click', function(e) {
-      if (editingTaskId === null) return;
-      const editContainer = document.querySelector(`[data-id="${editingTaskId}"]`);
-      if (editContainer && !editContainer.contains(e.target)) {
-        commitInlineEdit(editingTaskId);
-      }
+      preventSafariInputScroll(document.getElementById('task-input'));
     });
 
     function openAboutModal() {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       document.getElementById('about-modal').style.display = 'flex';
     }
     
@@ -1091,7 +1163,7 @@
       // Populate Ward Breakdown Container
       const breakdownContainer = document.getElementById('ward-breakdown-container');
       let bHtml = '';
-      const wardKeys = Object.keys(wardStats).sort();
+      const wardKeys = Object.keys(wardStats).sort((a, b) => wardStats[b].added - wardStats[a].added);
       for (const w of wardKeys) {
         const s = wardStats[w];
         if (s.added > 0 || s.done > 0) {
@@ -1141,7 +1213,6 @@
     }
 
     function selectWard(ward) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       const mainContent = document.getElementById('main-content');
       if (mainContent) mainContent.scrollTop = 0;
       selectedWard = ward;
@@ -1157,7 +1228,6 @@
     }
 
     function addTask(priority) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       const input = document.getElementById('task-input');
       const text = input.value.trim();
       if (!text) return;
@@ -1183,84 +1253,80 @@
       setTimeout(() => input.focus(), 10);
     }
 
+    // --- NEW MODAL EDIT SYSTEM (Fixes keyboard blocking) ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
-      if (editingTaskId !== null && editingTaskId !== id) commitInlineEdit(editingTaskId);
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
       
-      editingTaskId = id;
-      renderWithAnimation(true);
-
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
+      mobileEditActiveId = id;
+      const input = document.getElementById('mobile-edit-input');
+      input.value = task.text;
+      
+      setMobileEditUrgency(task.priority);
+      
+      // Show overlay
+      document.getElementById('mobile-edit-overlay').style.display = 'flex';
+      
+      // Focus after small delay so modal is fully visible
+      setTimeout(() => {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
-        
-        setTimeout(() => {
-          const editInputRef = document.getElementById(`edit-input-${id}`);
-          const mainContent = document.getElementById('main-content');
-          if (editInputRef && mainContent) {
-            const inputRect = editInputRef.getBoundingClientRect();
-            const mainRect = mainContent.getBoundingClientRect();
-            if (inputRect.bottom > mainRect.bottom - 150 || inputRect.top < mainRect.top) {
-                const offsetTop = inputRect.top - mainRect.top + mainContent.scrollTop;
-                mainContent.scrollTo({ top: offsetTop - 150, behavior: 'auto' });
-            }
+      }, 50);
+    }
+    
+    function setMobileEditUrgency(priority) {
+        mobileEditTempPriority = priority;
+        document.getElementById('mobile-edit-high').classList.remove('selected');
+        document.getElementById('mobile-edit-mid').classList.remove('selected');
+        document.getElementById('mobile-edit-low').classList.remove('selected');
+        document.getElementById(`mobile-edit-${priority}`).classList.add('selected');
+    }
+
+    function closeMobileEdit(e) {
+      if (e && e.target !== document.getElementById('mobile-edit-overlay') && e.target.className !== 'edit-cancel-btn') return;
+      document.getElementById('mobile-edit-overlay').style.display = 'none';
+      mobileEditActiveId = null;
+    }
+
+    function saveMobileEdit() {
+      if (!mobileEditActiveId) return;
+      const input = document.getElementById('mobile-edit-input');
+      const text = input.value.trim();
+      if (!text) {
+          alert('Task text cannot be empty');
+          return;
+      }
+      
+      const task = tasks.find(t => t.id === mobileEditActiveId);
+      if (task) {
+          if (task.text !== text || task.priority !== mobileEditTempPriority) {
+              task.text = text;
+              task.priority = mobileEditTempPriority;
+              saveAndRender(`Edited task`);
+              showToast(`Saved edits`);
           }
-        }, 150); 
       }
+      
+      // Close overlay and hide keyboard
+      input.blur();
+      closeMobileEdit();
     }
-
-    function changeUrgencyDirect(id, priority, event) {
-      if (event) { event.preventDefault(); event.stopPropagation(); }
-      const task = tasks.find(t => t.id === id);
-      if (task) task.priority = priority;
-      const itemContainer = document.querySelector(`[data-id="${id}"]`);
-      if (itemContainer) {
-         const buttons = itemContainer.querySelectorAll('.urgency-opt-btn');
-         buttons.forEach(btn => btn.classList.remove('selected'));
-         const btn = itemContainer.querySelector(`.opt-${priority}`);
-         if (btn) btn.classList.add('selected');
-      }
-    }
-
-    function handleEditBlur(id) {
-      setTimeout(() => {
-        if (editingTaskId === id) {
-          commitInlineEdit(id);
-        }
-      }, 150);
-    }
-
+    
     function commitInlineEdit(id) {
-      const input = document.getElementById(`edit-input-${id}`);
-      if (input) {
-        const text = input.value.trim();
-        if (text) {
-          const task = tasks.find(t => t.id === id);
-          if (task && task.text !== text) {
-            task.text = text;
-            editingTaskId = null;
-            saveAndRender(`Edited task`);
-            showToast(`Saved edits`);
-            return;
-          }
-        }
-      }
-      editingTaskId = null;
-      saveAndRender("Edit task", true, true); 
+       // Kept to prevent errors when switching tabs/modals while something was theoretically open
     }
+    // -----------------------------------------------------
 
     function deleteTask(id) {
       const task = tasks.find(t => t.id === id);
       tasks = tasks.filter(t => t.id !== id);
-      if (editingTaskId === id) editingTaskId = null;
       const fullText = task ? task.text : 'task';
       saveAndRender(`Delete task: '${fullText}'`);
       showToast(`Deleted task: '${fullText}'`);
     }
 
     function openTaskWardModal(taskId) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       activeEditingTaskIdForWard = taskId;
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
@@ -1275,7 +1341,7 @@
           if (w === 'All') return '';
           const isSelected = task.ward === w;
           return `<div class="ward-select-item ${isSelected ? 'selected' : ''}" onclick="assignWardToTask('${escapeHtml(w)}')">
-                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
+                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
                   </div>`;
         }).join('');
       }
@@ -1302,7 +1368,6 @@
     }
 
     function openWardModal() {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       renderWardModalList();
       document.getElementById('ward-modal').style.display = 'flex';
     }
@@ -1383,10 +1448,8 @@
     }
 
     function setSort(mode) {
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
-      
       if (currentSort === mode) {
-        sortDirection[mode] *= -1; 
+        sortDirection[mode] *= -1; // Reverse direction
       }
       currentSort = mode;
       
@@ -1395,7 +1458,7 @@
       const sf = document.getElementById('sort-finish');
       if (sf) sf.classList.toggle('active', mode === 'finish');
       
-      renderWithAnimation(tasks.length > 50);
+      renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
       
       let sortMsg = '';
       if (mode === 'time' || mode === 'finish') {
@@ -1418,7 +1481,6 @@
 
     function toggleTask(id) {
       let actionType = "Toggle task";
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       tasks = tasks.map(task => {
         if (task.id === id) {
           actionType = task.completed ? `Uncompleted: '${task.text}'` : `Completed: '${task.text}'`;
@@ -1434,7 +1496,6 @@
     function clearAll() {
       if (confirm('Clear all tasks?')) {
         tasks = [];
-        editingTaskId = null;
         saveAndRender("Clear all tasks");
         showToast("Cleared all tasks");
       }
@@ -1454,7 +1515,6 @@
 
     function exportTasks() {
       if (typeof gtag === 'function') gtag('event', 'backup_used');
-      if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       if (tasks.length === 0 && wards.length <= 1) {
         alert("No tasks or wards available to backup.");
         return;
@@ -1482,7 +1542,6 @@
             if (imported.wards) wards = imported.wards;
           }
           selectedWard = 'All';
-          editingTaskId = null;
           saveAndRender("Restore backup", false, true);
           alert("Backup restored!");
         } catch (err) {
@@ -1541,23 +1600,8 @@
       }
 
       listContainer.innerHTML = sortedTasks.map(task => {
-        const isEditing = (editingTaskId === task.id);
-        if (isEditing) {
-          return `
-            <div class="task-item" data-id="${task.id}">
-              <div class="inline-edit-container">
-                <input type="text" id="edit-input-${task.id}" class="inline-edit-input" value="${escapeHtml(task.text)}" enterkeyhint="done" onkeydown="if(event.key==='Enter') commitInlineEdit(${task.id})" onblur="handleEditBlur(${task.id})">
-                <div class="inline-urgency-selector">
-                  <span class="urgency-label">Urgency:</span>
-                  <button type="button" class="urgency-opt-btn opt-high ${task.priority === 'high' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'high', event)" onclick="changeUrgencyDirect(${task.id}, 'high', event)">High</button>
-                  <button type="button" class="urgency-opt-btn opt-mid ${task.priority === 'mid' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'mid', event)" onclick="changeUrgencyDirect(${task.id}, 'mid', event)">Mid</button>
-                  <button type="button" class="urgency-opt-btn opt-low ${task.priority === 'low' ? 'selected' : ''}" ontouchstart="changeUrgencyDirect(${task.id}, 'low', event)" onclick="changeUrgencyDirect(${task.id}, 'low', event)">Low</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }
 
+        // SVG tick to bypass Safari's aggressive emoji styler
         const tickSvg = task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
 
         return `
