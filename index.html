@@ -245,8 +245,8 @@
       -webkit-overflow-scrolling: touch;
       padding-top: calc(130px + env(safe-area-inset-top, 0px)); 
       padding-bottom: calc(45vh + env(safe-area-inset-bottom, 0px));
-      /* Add smooth scrolling to the main container */
-      scroll-behavior: smooth;
+      /* Disable smooth scrolling on the main container as we're not jumping anymore */
+      scroll-behavior: auto;
     }
 
     .empty-state {
@@ -264,7 +264,7 @@
       flex-direction: column;
       gap: 6px;
       position: relative;
-      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
+      min-height: calc(100% + 1px);
     }
 
     .task-item {
@@ -406,7 +406,7 @@
       background: rgba(0,0,0,0.6);
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: flex-start; /* IMPORTANT: Align to top so it's never blocked by keyboard */
       padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
       z-index: 5000; /* Increased to ensure it covers everything */
       animation: fadeIn 0.2s ease;
@@ -1020,7 +1020,6 @@
       }
       setTimeout(handleViewportResize, 100);
       setTimeout(handleViewportResize, 500); // Fallback to calculate header height exactly
-      preventSafariInputScroll(document.getElementById('task-input'));
     });
 
     function openAboutModal() {
@@ -1060,14 +1059,22 @@
       let addedCount = 0;
       let doneCount = 0;
       let totalTimeToFinish = 0;
+      let tasksWithTimeCount = 0;
 
       tasks.forEach(t => {
         if (t.createdAt >= cutoff) {
           addedCount++;
         }
-        if (t.completed && t.completedAt && t.completedAt >= cutoff) {
+        
+        // Count as done if completed. For old tasks without completedAt, we check if createdAt is within cutoff just to be safe.
+        const taskFinishTime = t.completedAt || t.createdAt; 
+        if (t.completed && taskFinishTime >= cutoff) {
           doneCount++;
-          totalTimeToFinish += (t.completedAt - t.createdAt);
+          // Only add to average math if we actually know when it was completed
+          if (t.completedAt) {
+            totalTimeToFinish += (t.completedAt - t.createdAt);
+            tasksWithTimeCount++;
+          }
         }
       });
 
@@ -1075,8 +1082,8 @@
       document.getElementById('stat-done').innerText = doneCount;
 
       const avgElem = document.getElementById('stat-avg-time');
-      if (doneCount > 0) {
-        const avgMs = totalTimeToFinish / doneCount;
+      if (tasksWithTimeCount > 0) {
+        const avgMs = totalTimeToFinish / tasksWithTimeCount;
         const mins = Math.floor(avgMs / 60000);
         if (mins < 60) {
           avgElem.innerText = `${mins} min`;
@@ -1163,7 +1170,7 @@
       setTimeout(() => input.focus(), 10);
     }
 
-    // --- MODAL EDIT SYSTEM ---
+    // --- NEW MODAL EDIT SYSTEM (Fixes keyboard blocking) ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
       const task = tasks.find(t => t.id === id);
@@ -1175,8 +1182,10 @@
       
       setMobileEditUrgency(task.priority);
       
+      // Show overlay
       document.getElementById('mobile-edit-overlay').style.display = 'flex';
       
+      // Focus after small delay so modal is fully visible
       setTimeout(() => {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -1216,9 +1225,11 @@
           }
       }
       
+      // Close overlay and hide keyboard
       input.blur();
       closeMobileEdit();
     }
+    // -----------------------------------------------------
 
     function deleteTask(id) {
       const task = tasks.find(t => t.id === id);
@@ -1351,7 +1362,7 @@
 
     function setSort(mode) {
       if (currentSort === mode) {
-        sortDirection[mode] *= -1; 
+        sortDirection[mode] *= -1; // Reverse direction
       }
       currentSort = mode;
       
@@ -1360,7 +1371,7 @@
       const sf = document.getElementById('sort-finish');
       if (sf) sf.classList.toggle('active', mode === 'finish');
       
-      renderWithAnimation(tasks.length > 50);
+      renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
       
       let sortMsg = '';
       if (mode === 'time' || mode === 'finish') {
@@ -1554,7 +1565,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = ''; 
+            node.style.opacity = ''; // Fix completed task transparency bug
             node.style.transform = 'translateY(0)';
           });
         }
