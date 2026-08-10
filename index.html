@@ -263,7 +263,7 @@
       flex-direction: column;
       gap: 6px;
       position: relative;
-      min-height: calc(100% + 1px); /* Force iOS scroll bounce */
+      min-height: calc(100% + 1px);
     }
 
     .task-item {
@@ -677,7 +677,7 @@
 
 <!-- Stats Modal -->
 <div id="stat-modal" class="modal-backdrop" style="display: none; z-index: 2500;" onclick="closeStatModal(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">
+  <div class="modal-content" style="max-width: 450px;" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h3>Task Statistics</h3>
       <button class="close-modal-btn" onclick="closeStatModal()">&times;</button>
@@ -713,11 +713,22 @@
         <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Tasks Done</div>
         <div id="stat-done" style="font-size: 1.5rem; font-weight: 700; color: var(--success);">0</div>
       </div>
+      <div style="background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Added / Hour</div>
+        <div id="stat-added-hr" style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">0</div>
+      </div>
+      <div style="background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Done / Hour</div>
+        <div id="stat-done-hr" style="font-size: 1.2rem; font-weight: 700; color: var(--success);">0</div>
+      </div>
       <div style="grid-column: span 2; background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
         <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Average Time to Finish</div>
         <div id="stat-avg-time" style="font-size: 1.2rem; font-weight: 700; color: var(--text);">--</div>
       </div>
     </div>
+    
+    <button id="btn-toggle-ward-breakdown" onclick="toggleWardBreakdown()" style="width: 100%; margin-top: 12px; padding: 10px; background: var(--ward-chip-bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-weight: 600; cursor: pointer;">Show Breakdown by Ward</button>
+    <div id="ward-breakdown-container" style="display: none; margin-top: 10px; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; padding-right: 4px;"></div>
   </div>
 </div>
 
@@ -879,20 +890,6 @@
       return distinctWardColors[index];
     }
 
-    function preventSafariInputScroll(el) {
-      if (!el) return;
-      el.addEventListener('focus', (e) => {
-        // Only trigger the fix if we are strictly using the bottom bar
-        if(el.id === 'task-input') {
-            el.style.transform = 'translateY(-2000px)';
-            requestAnimationFrame(() => {
-              el.style.transform = '';
-              window.scrollTo(0, 0);
-            });
-        }
-      });
-    }
-
     let appContainer, footerElem, topFixedElem, mainContentElem;
     let viewportUpdatePending = false;
 
@@ -952,7 +949,6 @@
       }
       setTimeout(handleViewportResize, 100);
       setTimeout(handleViewportResize, 500); // Fallback to calculate header height exactly
-      preventSafariInputScroll(document.getElementById('task-input'));
     });
     
     document.addEventListener('click', function(e) {
@@ -970,6 +966,18 @@
     
     function closeAboutModal() {
       document.getElementById('about-modal').style.display = 'none';
+    }
+
+    function toggleWardBreakdown() {
+      const container = document.getElementById('ward-breakdown-container');
+      const btn = document.getElementById('btn-toggle-ward-breakdown');
+      if (container.style.display === 'none') {
+        container.style.display = 'flex';
+        btn.innerText = 'Hide Breakdown by Ward';
+      } else {
+        container.style.display = 'none';
+        btn.innerText = 'Show Breakdown by Ward';
+      }
     }
 
     function openStatModal() {
@@ -1020,6 +1028,9 @@
           startCutoff = now - (7 * 24 * 60 * 60 * 1000);
         } else if (timeframe === '30days') {
           startCutoff = now - (30 * 24 * 60 * 60 * 1000);
+        } else if (timeframe === 'all') {
+          startCutoff = now; 
+          tasks.forEach(t => { if (t.createdAt < startCutoff) startCutoff = t.createdAt; });
         }
       }
 
@@ -1027,15 +1038,21 @@
       let doneCount = 0;
       let totalTimeToFinish = 0;
       let tasksWithTimeCount = 0;
+      let wardStats = {};
 
       tasks.forEach(t => {
+        let w = t.ward || 'Unassigned';
+        if (!wardStats[w]) wardStats[w] = { added: 0, done: 0 };
+
         if (t.createdAt >= startCutoff && t.createdAt <= endCutoff) {
           addedCount++;
+          wardStats[w].added++;
         }
         
         const taskFinishTime = t.completedAt || t.createdAt; 
         if (t.completed && taskFinishTime >= startCutoff && taskFinishTime <= endCutoff) {
           doneCount++;
+          wardStats[w].done++;
           if (t.completedAt) {
             totalTimeToFinish += (t.completedAt - t.createdAt);
             tasksWithTimeCount++;
@@ -1045,6 +1062,12 @@
 
       document.getElementById('stat-added').innerText = addedCount;
       document.getElementById('stat-done').innerText = doneCount;
+
+      let durationHrs = (endCutoff - startCutoff) / (1000 * 60 * 60);
+      if (durationHrs <= 0) durationHrs = 1; // Prevent division by zero if started exactly right now
+      
+      document.getElementById('stat-added-hr').innerText = (addedCount / durationHrs).toFixed(1);
+      document.getElementById('stat-done-hr').innerText = (doneCount / durationHrs).toFixed(1);
 
       const avgElem = document.getElementById('stat-avg-time');
       if (tasksWithTimeCount > 0) {
@@ -1064,6 +1087,29 @@
       } else {
         avgElem.innerText = '--';
       }
+
+      // Populate Ward Breakdown Container
+      const breakdownContainer = document.getElementById('ward-breakdown-container');
+      let bHtml = '';
+      const wardKeys = Object.keys(wardStats).sort();
+      for (const w of wardKeys) {
+        const s = wardStats[w];
+        if (s.added > 0 || s.done > 0) {
+          bHtml += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--input-bg);">
+              <span style="font-weight: 600; color: var(--text);">${escapeHtml(w)}</span>
+              <span style="font-size: 0.85rem; color: var(--ward-chip-text);">
+                Added: <strong style="color:var(--primary)">${s.added}</strong> | 
+                Done: <strong style="color:var(--success)">${s.done}</strong>
+              </span>
+            </div>
+          `;
+        }
+      }
+      if (bHtml === '') {
+        bHtml = '<div style="text-align: center; color: var(--ward-chip-text); font-size: 0.85rem; padding: 12px;">No activity in this timeframe</div>';
+      }
+      breakdownContainer.innerHTML = bHtml;
     }
 
     function saveAndRender(actionName = "Action", skipHistory = false, skipAnimation = false) {
@@ -1146,7 +1192,6 @@
 
       const input = document.getElementById(`edit-input-${id}`);
       if (input) {
-        preventSafariInputScroll(input);
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
         
@@ -1158,7 +1203,7 @@
             const mainRect = mainContent.getBoundingClientRect();
             if (inputRect.bottom > mainRect.bottom - 150 || inputRect.top < mainRect.top) {
                 const offsetTop = inputRect.top - mainRect.top + mainContent.scrollTop;
-                mainContent.scrollTo({ top: offsetTop - 150, behavior: 'smooth' });
+                mainContent.scrollTo({ top: offsetTop - 150, behavior: 'auto' });
             }
           }
         }, 150); 
@@ -1230,7 +1275,7 @@
           if (w === 'All') return '';
           const isSelected = task.ward === w;
           return `<div class="ward-select-item ${isSelected ? 'selected' : ''}" onclick="assignWardToTask('${escapeHtml(w)}')">
-                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
+                    <span>${escapeHtml(w)}</span> ${isSelected ? '<span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
                   </div>`;
         }).join('');
       }
@@ -1249,7 +1294,7 @@
         const task = tasks.find(t => t.id === activeEditingTaskIdForWard);
         if (task) {
           task.ward = wardName;
-          saveAndRender(`Moved to ${wardName || 'All'}`);
+          saveAndRender(`Moved task to ${wardName || 'All'}`);
           showToast(`Moved task to ${wardName || 'All'}`);
         }
       }
@@ -1260,7 +1305,6 @@
       if (editingTaskId !== null) commitInlineEdit(editingTaskId);
       renderWardModalList();
       document.getElementById('ward-modal').style.display = 'flex';
-      preventSafariInputScroll(document.getElementById('new-ward-input'));
     }
 
     function closeWardModal() {
@@ -1472,9 +1516,7 @@
         });
       };
       
-      const activeTasks = sortTasks(filtered.filter(t => !t.completed), false);
-      const completedTasks = sortTasks(filtered.filter(t => t.completed), true);
-      return [...activeTasks, ...completedTasks];
+      return [...sortTasks(filtered.filter(t => !t.completed), false), ...sortTasks(filtered.filter(t => t.completed), true)];
     }
 
     function renderWithAnimation(skipAnimation = false) {
