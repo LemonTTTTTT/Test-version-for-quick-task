@@ -350,10 +350,11 @@
     [data-theme="dark"] .badge-no-ward { background-color: #333; }
 
     .task-time {
-      font-size: 0.65rem;
+      font-size: 0.55rem;
       color: #8c8c8c;
       margin-left: 2px;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .action-btn {
@@ -392,9 +393,9 @@
       background: none;
       border: none;
       color: #8c8c8c;
-      font-size: 0.85rem;
+      font-size: 1.1rem;
       cursor: pointer;
-      padding: 2px 4px;
+      padding: 6px 8px;
       border-radius: 4px;
     }
 
@@ -447,13 +448,13 @@
       padding: 12px;
       border: 1px solid var(--primary);
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 16px; /* 16px prevents iOS auto-zoom */
       background: var(--input-bg);
       color: var(--text);
       outline: none;
       -webkit-appearance: none;
     }
-    
+
     .inline-urgency-selector {
       display: flex;
       gap: 6px;
@@ -466,15 +467,16 @@
     }
     .urgency-opt-btn {
       flex: 1;
-      padding: 6px;
+      padding: 8px;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
       font-weight: 600;
       background: var(--btn-bg);
       color: var(--ward-chip-text);
       cursor: pointer;
       text-transform: uppercase;
+      transition: all 0.2s;
     }
     .urgency-opt-btn.opt-high.selected { background: var(--high); color: white; border-color: var(--high); }
     .urgency-opt-btn.opt-mid.selected { background: var(--mid); color: white; border-color: var(--mid); }
@@ -709,7 +711,10 @@
         <button class="toggle-btn" id="sort-urgency" onclick="setSort('urgency')">By urgency</button>
         <button class="toggle-btn" id="sort-finish" onclick="setSort('finish')">By finish</button>
       </div>
-      <button class="clear-btn" onclick="clearAll()">Clear all</button>
+      <div>
+        <button class="clear-btn" style="color: var(--primary); font-weight: 600; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; margin-right: 4px;" onclick="openStatModal()">📊 Stats</button>
+        <button class="clear-btn" onclick="clearAll()">Clear all</button>
+      </div>
     </div>
 
     <div class="ward-section">
@@ -761,6 +766,40 @@
 
 <!-- Toast Notification -->
 <div id="toast-container"></div>
+
+<!-- Stats Modal -->
+<div id="stat-modal" class="modal-backdrop" style="display: none; z-index: 2500;" onclick="closeStatModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Task Statistics</h3>
+      <button class="close-modal-btn" onclick="closeStatModal()">&times;</button>
+    </div>
+    
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <select id="stat-timeframe" class="modal-input" onchange="calculateStats()">
+        <option value="all">All Time</option>
+        <option value="today">Today</option>
+        <option value="7days">Last 7 Days</option>
+        <option value="30days">Last 30 Days</option>
+      </select>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div style="background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Tasks Added</div>
+        <div id="stat-added" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">0</div>
+      </div>
+      <div style="background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Tasks Done</div>
+        <div id="stat-done" style="font-size: 1.5rem; font-weight: 700; color: var(--success);">0</div>
+      </div>
+      <div style="grid-column: span 2; background: var(--btn-bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+        <div style="font-size: 0.8rem; color: var(--ward-chip-text); margin-bottom: 4px;">Average Time to Finish</div>
+        <div id="stat-avg-time" style="font-size: 1.2rem; font-weight: 700; color: var(--text);">--</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Disclaimer & Acknowledgments Modal -->
 <div id="about-modal" class="modal-backdrop" style="display: none;">
@@ -922,6 +961,20 @@
       return distinctWardColors[index];
     }
 
+    function preventSafariInputScroll(el) {
+      if (!el) return;
+      el.addEventListener('focus', (e) => {
+        // Only trigger the fix if we are strictly using the bottom bar
+        if(el.id === 'task-input') {
+            el.style.transform = 'translateY(-2000px)';
+            requestAnimationFrame(() => {
+              el.style.transform = '';
+              window.scrollTo(0, 0);
+            });
+        }
+      });
+    }
+
     let appContainer, footerElem, topFixedElem, mainContentElem;
     let viewportUpdatePending = false;
 
@@ -966,6 +1019,8 @@
         document.getElementById('theme-btn').innerText = '🌙';
       }
       setTimeout(handleViewportResize, 100);
+      setTimeout(handleViewportResize, 500); // Fallback to calculate header height exactly
+      preventSafariInputScroll(document.getElementById('task-input'));
     });
 
     function openAboutModal() {
@@ -974,6 +1029,69 @@
     
     function closeAboutModal() {
       document.getElementById('about-modal').style.display = 'none';
+    }
+
+    function openStatModal() {
+      if (typeof gtag === 'function') gtag('event', 'view_stats');
+      calculateStats();
+      document.getElementById('stat-modal').style.display = 'flex';
+    }
+
+    function closeStatModal(e) {
+      if (e && e.target !== document.getElementById('stat-modal') && e.target.className !== 'close-modal-btn') return;
+      document.getElementById('stat-modal').style.display = 'none';
+    }
+
+    function calculateStats() {
+      const timeframe = document.getElementById('stat-timeframe').value;
+      const now = Date.now();
+      let cutoff = 0;
+      
+      if (timeframe === 'today') {
+        const d = new Date();
+        d.setHours(0,0,0,0);
+        cutoff = d.getTime();
+      } else if (timeframe === '7days') {
+        cutoff = now - (7 * 24 * 60 * 60 * 1000);
+      } else if (timeframe === '30days') {
+        cutoff = now - (30 * 24 * 60 * 60 * 1000);
+      }
+
+      let addedCount = 0;
+      let doneCount = 0;
+      let totalTimeToFinish = 0;
+
+      tasks.forEach(t => {
+        if (t.createdAt >= cutoff) {
+          addedCount++;
+        }
+        if (t.completed && t.completedAt && t.completedAt >= cutoff) {
+          doneCount++;
+          totalTimeToFinish += (t.completedAt - t.createdAt);
+        }
+      });
+
+      document.getElementById('stat-added').innerText = addedCount;
+      document.getElementById('stat-done').innerText = doneCount;
+
+      const avgElem = document.getElementById('stat-avg-time');
+      if (doneCount > 0) {
+        const avgMs = totalTimeToFinish / doneCount;
+        const mins = Math.floor(avgMs / 60000);
+        if (mins < 60) {
+          avgElem.innerText = `${mins} min`;
+        } else if (mins < 1440) {
+          const hours = Math.floor(mins / 60);
+          const remainMins = mins % 60;
+          avgElem.innerText = `${hours}h ${remainMins}m`;
+        } else {
+          const days = Math.floor(mins / 1440);
+          const hours = Math.floor((mins % 1440) / 60);
+          avgElem.innerText = `${days}d ${hours}h`;
+        }
+      } else {
+        avgElem.innerText = '--';
+      }
     }
 
     function saveAndRender(actionName = "Action", skipHistory = false, skipAnimation = false) {
@@ -1045,6 +1163,7 @@
       setTimeout(() => input.focus(), 10);
     }
 
+    // --- MODAL EDIT SYSTEM ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
       const task = tasks.find(t => t.id === id);
@@ -1435,7 +1554,7 @@
           node.getBoundingClientRect();
           requestAnimationFrame(() => {
             node.style.transition = 'all 0.4s ease';
-            node.style.opacity = '';
+            node.style.opacity = ''; 
             node.style.transform = 'translateY(0)';
           });
         }
