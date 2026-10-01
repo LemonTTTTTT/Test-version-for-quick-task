@@ -820,7 +820,7 @@
     <div class="about-body">
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault()" onclick="exportTasks()">⬇️ Backup Data</button>
-        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault()" onclick="document.getElementById('import-file').click()">⬆️ Restore Data</button>
+        <button class="add-btn mid" style="text-align: left; padding: 10px; color: var(--primary);" onmousedown="event.preventDefault()" onclick="document.getElementById('import-file').click()">⬆️️ Restore Data</button>
         <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importTasks(event)">
         <button class="add-btn" style="text-align: left; padding: 10px; color: var(--high); border-color: #ffccc7; background: #fff2f0;" onclick="factoryReset()">⚠️ Factory Reset / Clear All Data</button>
       </div>
@@ -888,7 +888,8 @@
         wards: JSON.parse(JSON.stringify(wards)),
         selectedWard: selectedWard
       });
-      if (historyStack.length > 50) {
+      // Lowered stack size limit to 15 to reduce memory overhead with large task lists
+      if (historyStack.length > 15) {
         historyStack.shift();
       } else {
         if (!isInitial) historyIndex++;
@@ -1253,7 +1254,6 @@
       setTimeout(() => input.focus(), 10);
     }
 
-    // --- NEW MODAL EDIT SYSTEM (Fixes keyboard blocking) ---
     function startEditing(id, event) {
       if (event) { event.stopPropagation(); event.preventDefault(); }
       const task = tasks.find(t => t.id === id);
@@ -1265,10 +1265,8 @@
       
       setMobileEditUrgency(task.priority);
       
-      // Show overlay
       document.getElementById('mobile-edit-overlay').style.display = 'flex';
       
-      // Focus after small delay so modal is fully visible
       setTimeout(() => {
         input.focus();
         input.setSelectionRange(input.value.length, input.value.length);
@@ -1308,15 +1306,11 @@
           }
       }
       
-      // Close overlay and hide keyboard
       input.blur();
       closeMobileEdit();
     }
     
-    function commitInlineEdit(id) {
-       // Kept to prevent errors when switching tabs/modals while something was theoretically open
-    }
-    // -----------------------------------------------------
+    function commitInlineEdit(id) {}
 
     function deleteTask(id) {
       const task = tasks.find(t => t.id === id);
@@ -1449,7 +1443,7 @@
 
     function setSort(mode) {
       if (currentSort === mode) {
-        sortDirection[mode] *= -1; // Reverse direction
+        sortDirection[mode] *= -1; 
       }
       currentSort = mode;
       
@@ -1458,7 +1452,7 @@
       const sf = document.getElementById('sort-finish');
       if (sf) sf.classList.toggle('active', mode === 'finish');
       
-      renderWithAnimation(tasks.length > 50); // Skip animation if heavy list to prevent lag
+      renderWithAnimation(tasks.length > 50); 
       
       let sortMsg = '';
       if (mode === 'time' || mode === 'finish') {
@@ -1502,7 +1496,7 @@
     }
 
     function factoryReset() {
-      if (confirm("⚠️ WARNING: This will permanently delete ALL tasks and ALL wards. You cannot undo this action! Please make sure you have backed up your data first if you need it.\n\nAre you absolutely sure you want to factory reset?")) {
+      if (confirm("⚠️️ WARNING: This will permanently delete ALL tasks and ALL wards. You cannot undo this action! Please make sure you have backed up your data first if you need it.\n\nAre you absolutely sure you want to factory reset?")) {
         localStorage.removeItem('qt_tasks');
         localStorage.removeItem('qt_wards');
         tasks = [];
@@ -1513,22 +1507,33 @@
       }
     }
 
+    // --- FIXED BACKUP FUNCTION FOR LARGE DATASETS ---
     function exportTasks() {
       if (typeof gtag === 'function') gtag('event', 'backup_used');
       if (tasks.length === 0 && wards.length <= 1) {
         alert("No tasks or wards available to backup.");
         return;
       }
-      const now = Date.now();
       const d = new Date();
       const filename = `quicktasks_backup_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.json`;
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ tasks, wards }, null, 2));
+      
+      // Minified JSON string removes unneeded whitespace
+      const jsonString = JSON.stringify({ tasks, wards });
+      
+      // Blob and Object URL avoid browser URL length limits
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const objectUrl = URL.createObjectURL(blob);
+      
       const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", filename);
+      downloadAnchor.href = objectUrl;
+      downloadAnchor.download = filename;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
-      downloadAnchor.remove();
+      
+      setTimeout(() => {
+        downloadAnchor.remove();
+        URL.revokeObjectURL(objectUrl);
+      }, 100);
     }
 
     function importTasks(event) {
@@ -1601,7 +1606,6 @@
 
       listContainer.innerHTML = sortedTasks.map(task => {
 
-        // SVG tick to bypass Safari's aggressive emoji styler
         const tickSvg = task.completed ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
 
         return `
